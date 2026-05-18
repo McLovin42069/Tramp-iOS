@@ -6,6 +6,12 @@ workflows:
     environment:
       xcode: latest
       cocoapods: default
+      ios_signing:
+        provisioning_profiles:
+          - Tramp_AdHoc
+          - Tramp_AppStore
+        certificates:
+          - Tramp_Distribution
     triggering:
       events:
         - push
@@ -26,24 +32,31 @@ workflows:
           echo "Project generated:"
           ls -la Tramp.xcodeproj/
       
-      - name: Build Unsigned iOS App
+      - name: Build Signed iOS App (Archive + IPA)
         script: |
-          echo "Building Tramp for iOS (unsigned)..."
+          echo "Archiving Tramp for iOS..."
           xcodebuild \
             -project Tramp.xcodeproj \
             -scheme Tramp \
             -destination 'generic/platform=iOS' \
-            -configuration Debug \
-            CODE_SIGN_IDENTITY="" \
-            CODE_SIGNING_REQUIRED=NO \
-            CODE_SIGNING_ALLOWED=NO \
-            ONLY_ACTIVE_ARCH=NO \
-            build
+            -configuration Release \
+            -archivePath build/ios/Tramp.xcarchive \
+            archive
+          
+          echo "Exporting IPA..."
+          xcodebuild \
+            -exportArchive \
+            -archivePath build/ios/Tramp.xcarchive \
+            -exportPath build/ios/ipa \
+            -exportOptionsPlist ExportOptions.plist
+          
+          echo "Build artifacts:"
+          ls -la build/ios/ipa/
       
       - name: Show Build Products
         script: |
-          echo "Build completed. Searching for .app bundle..."
-          find ~/Library/Developer/Xcode/DerivedData -name "Tramp.app" -type d 2>/dev/null || true
+          echo "Searching for generated artifacts..."
+          find build/ios -name "*.ipa" -o -name "*.app" 2>/dev/null || true
     artifacts:
-      - build/ios/**/*.app
+      - build/ios/ipa/*.ipa
       - build/ios/**/*.dSYM
