@@ -167,7 +167,7 @@ struct WaveformVisualizer: View {
                 }
             }
             
-            context.stroke(path2, with: .color(Color.magenta.opacity(0.7)), lineWidth: 1.5)
+            context.stroke(path2, with: .color(Color.pink.opacity(0.7)), lineWidth: 1.5)
         }
         .onReceive(timer) { _ in
             phase += 0.1

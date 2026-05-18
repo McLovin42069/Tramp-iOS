@@ -20,7 +20,8 @@ actor RadioEngine {
         async let jamendoTracks = fetchJamendoTracks()
         async let archiveTracks = fetchArchiveTracks()
         
-        let (jamendo, archive) = await (try? jamendoTracks, try? archiveTracks)
+        let jamendo = try? await jamendoTracks
+        let archive = try? await archiveTracks
         
         if let jamendo = jamendo { tracks.append(contentsOf: jamendo) }
         if let archive = archive { tracks.append(contentsOf: archive) }
@@ -40,7 +41,10 @@ actor RadioEngine {
             async let jamendo = fetchSingleJamendo()
             async let archive = fetchSingleArchive()
             
-            if let track = await (try? jamendo) ?? (try? archive) {
+            let jamendoResult = try? await jamendo
+            let archiveResult = try? await archive
+            
+            if let track = jamendoResult ?? archiveResult {
                 let recentlyPlayed = history.suffix(20).map { $0.id }
                 if !recentlyPlayed.contains(track.id) {
                     history.append(track)
