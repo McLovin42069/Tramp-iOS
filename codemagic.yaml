@@ -10,7 +10,7 @@ workflows:
         provisioning_profiles:
           - Tramp music player
         certificates:
-          - Tramp_Distribution
+          - Tramp music player
     triggering:
       events:
         - push
