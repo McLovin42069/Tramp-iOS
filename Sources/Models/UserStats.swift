@@ -78,7 +78,7 @@ struct UserStats: Codable {
     mutating func checkBadges() {
         let allBadges = Badge.allBadges
         for badge in allBadges where !badges.contains(where: { $0.id == badge.id }) {
-            if badge.isUnlocked(stats: self) {
+            if badge.requirement.isUnlocked(stats: self) {
                 badges.append(badge)
             }
         }
