@@ -40,6 +40,8 @@ workflows:
             -destination 'generic/platform=iOS' \
             -configuration Release \
             -archivePath build/ios/Tramp.xcarchive \
+            DEVELOPMENT_TEAM=3GSSABCN8K \
+            CODE_SIGN_STYLE=Automatic \
             archive
           
           echo "Exporting IPA..."

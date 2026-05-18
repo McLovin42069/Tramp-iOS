@@ -3,7 +3,9 @@
 <plist version="1.0">
 <dict>
     <key>method</key>
-    <string>ad-hoc</string>
+    <string>release-testing</string>
+    <key>teamID</key>
+    <string>3GSSABCN8K</string>
     <key>signingStyle</key>
     <string>automatic</string>
     <key>compileBitcode</key>
