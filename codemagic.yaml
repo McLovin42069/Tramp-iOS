@@ -8,8 +8,7 @@ workflows:
       cocoapods: default
       ios_signing:
         provisioning_profiles:
-          - Tramp_AdHoc
-          - Tramp_AppStore
+          - Tramp music player
         certificates:
           - Tramp_Distribution
     triggering:
