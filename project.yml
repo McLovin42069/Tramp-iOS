@@ -9,14 +9,14 @@ targets:
         excludes:
           - "README.md"
     info:
-      path: Sources/Info.plist
+      path: Info.plist
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: com.tramp.music
         CURRENT_PROJECT_VERSION: 1
         MARKETING_VERSION: "1.0.0"
         GENERATE_INFOPLIST_FILE: NO
-        INFOPLIST_FILE: $(SRCROOT)/Sources/Info.plist
+        INFOPLIST_FILE: $(SRCROOT)/Info.plist
         CODE_SIGN_IDENTITY: ""
         CODE_SIGNING_REQUIRED: NO
         CODE_SIGNING_ALLOWED: NO
