@@ -24,7 +24,7 @@ actor LocalFileService {
                 
                 let asset = AVAsset(url: destination)
                 let duration = try await asset.load(.duration)
-                let metadata = try await asset.loadMetadata(for: .id3)
+                let metadata = asset.metadata
                 
                 var title = url.deletingPathExtension().lastPathComponent
                 var artist = "Unknown Artist"

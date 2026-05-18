@@ -26,7 +26,7 @@ struct MarqueeText: View {
                                 containerWidth = geo.size.width
                                 startAnimation()
                             }
-                            .onChange(of: text) { _ in
+                            .onChange(of: text) { oldValue, newValue in
                                 textWidth = textGeo.size.width
                                 startAnimation()
                             }

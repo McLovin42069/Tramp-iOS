@@ -86,7 +86,7 @@ struct PlaylistWindowView: View {
                         Spacer()
                         
                         WinampTextButton(title: "CLEAR", width: 60, height: 28) {
-                            viewModel.queue.removeAll()
+                            viewModel.clearQueue()
                         }
                         
                         WinampTextButton(title: "SAVE", width: 60, height: 28) {

@@ -103,6 +103,11 @@ final class PlayerViewModel {
         audioEngine.queue.move(fromOffsets: source, toOffset: destination)
     }
     
+    func clearQueue() {
+        audioEngine.queue.removeAll()
+        audioEngine.currentIndex = 0
+    }
+    
     var progress: Double {
         guard duration > 0 else { return 0 }
         return currentTime / duration

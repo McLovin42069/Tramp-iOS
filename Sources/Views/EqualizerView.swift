@@ -40,7 +40,7 @@ struct EqualizerView: View {
                     }
                     .pickerStyle(.menu)
                     .tint(skinManager.currentSkin.accentColor)
-                    .onChange(of: selectedPreset) { _ in
+                    .onChange(of: selectedPreset) { oldValue, newValue in
                         applyPreset()
                     }
                     

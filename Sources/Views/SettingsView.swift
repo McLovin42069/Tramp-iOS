@@ -23,10 +23,10 @@ struct SettingsView: View {
                     // Playback Settings
                     Section(header: sectionHeader("Playback")) {
                         Toggle("Background Playback", isOn: $viewModel.backgroundPlaybackEnabled)
-                            .onChange(of: viewModel.backgroundPlaybackEnabled) { _ in viewModel.saveSettings() }
+                            .onChange(of: viewModel.backgroundPlaybackEnabled) { oldValue, newValue in viewModel.saveSettings() }
                         
                         Toggle("Crossfade", isOn: $viewModel.crossfadeEnabled)
-                            .onChange(of: viewModel.crossfadeEnabled) { _ in viewModel.saveSettings() }
+                            .onChange(of: viewModel.crossfadeEnabled) { oldValue, newValue in viewModel.saveSettings() }
                         
                         if viewModel.crossfadeEnabled {
                             HStack {
@@ -39,11 +39,11 @@ struct SettingsView: View {
                             
                             Slider(value: $viewModel.crossfadeDuration, in: 0.5...5, step: 0.5)
                                 .tint(skinManager.currentSkin.accentColor)
-                                .onChange(of: viewModel.crossfadeDuration) { _ in viewModel.saveSettings() }
+                                .onChange(of: viewModel.crossfadeDuration) { oldValue, newValue in viewModel.saveSettings() }
                         }
                         
                         Toggle("Auto-Cache Streams", isOn: $viewModel.autoCacheEnabled)
-                            .onChange(of: viewModel.autoCacheEnabled) { _ in viewModel.saveSettings() }
+                            .onChange(of: viewModel.autoCacheEnabled) { oldValue, newValue in viewModel.saveSettings() }
                         
                         HStack {
                             Text("Cache Size")
