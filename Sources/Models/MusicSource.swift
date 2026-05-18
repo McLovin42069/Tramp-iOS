@@ -1,6 +1,6 @@
 import Foundation
 
-enum MusicSource: String, CaseIterable, Identifiable {
+enum MusicSource: String, CaseIterable, Identifiable, Codable {
     case jamendo = "Jamendo"
     case soundcloud = "SoundCloud"
     case internetArchive = "Internet Archive"
