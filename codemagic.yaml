@@ -1,0 +1,49 @@
+workflows:
+  tramp-ios-build:
+    name: Build Tramp iOS
+    instance_type: mac_mini_m2
+    max_build_duration: 30
+    environment:
+      xcode: latest
+      cocoapods: default
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: "*"
+          include: true
+          source: true
+    scripts:
+      - name: Install XcodeGen
+        script: |
+          echo "Installing XcodeGen..."
+          brew install xcodegen
+      
+      - name: Generate Xcode Project
+        script: |
+          echo "Generating Tramp.xcodeproj from project.yml..."
+          xcodegen generate
+          echo "Project generated:"
+          ls -la Tramp.xcodeproj/
+      
+      - name: Build Unsigned iOS App
+        script: |
+          echo "Building Tramp for iOS (unsigned)..."
+          xcodebuild \
+            -project Tramp.xcodeproj \
+            -scheme Tramp \
+            -destination 'generic/platform=iOS' \
+            -configuration Debug \
+            CODE_SIGN_IDENTITY="" \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            ONLY_ACTIVE_ARCH=NO \
+            build
+      
+      - name: Show Build Products
+        script: |
+          echo "Build completed. Searching for .app bundle..."
+          find ~/Library/Developer/Xcode/DerivedData -name "Tramp.app" -type d 2>/dev/null || true
+    artifacts:
+      - build/ios/**/*.app
+      - build/ios/**/*.dSYM
