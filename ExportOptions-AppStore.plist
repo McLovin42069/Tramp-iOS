@@ -4,8 +4,15 @@
 <dict>
     <key>method</key>
     <string>app-store</string>
+    <key>teamID</key>
+    <string>3GSSABCN8K</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.tramp.music</key>
+        <string>Tramp App Store</string>
+    </dict>
     <key>uploadBitcode</key>
     <false/>
     <key>uploadSymbols</key>

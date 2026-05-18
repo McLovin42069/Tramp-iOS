@@ -7,7 +7,12 @@
     <key>teamID</key>
     <string>3GSSABCN8K</string>
     <key>signingStyle</key>
-    <string>automatic</string>
+    <string>manual</string>
+    <key>provisioningProfiles</key>
+    <dict>
+        <key>com.tramp.music</key>
+        <string>Tramp Ad Hoc</string>
+    </dict>
     <key>compileBitcode</key>
     <false/>
     <key>stripSwiftSymbols</key>

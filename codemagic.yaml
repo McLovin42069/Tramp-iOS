@@ -41,7 +41,9 @@ workflows:
             -configuration Release \
             -archivePath build/ios/Tramp.xcarchive \
             DEVELOPMENT_TEAM=3GSSABCN8K \
-            CODE_SIGN_STYLE=Automatic \
+            CODE_SIGN_STYLE=Manual \
+            CODE_SIGN_IDENTITY="Apple Distribution" \
+            PROVISIONING_PROFILE_SPECIFIER="Tramp Ad Hoc" \
             archive
           
           echo "Exporting IPA..."
