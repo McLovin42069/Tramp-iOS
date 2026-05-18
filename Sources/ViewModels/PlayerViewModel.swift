@@ -48,6 +48,11 @@ final class PlayerViewModel {
         }
     }
     
+    func pause() {
+        recordListeningTime()
+        audioEngine.pause()
+    }
+    
     func nextTrack() {
         recordListeningTime()
         audioEngine.nextTrack()
