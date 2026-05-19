@@ -39,29 +39,41 @@ final class SearchViewModel {
         var allResults: [Track] = []
         
         do {
+            var errors: [String] = []
+            
             // Search based on selected source or all
-            if selectedSource == nil || selectedSource == .jamendo {
-                async let jamendoResults = jamendo.search(query: searchQuery, limit: 20)
-                if let results = try? await jamendoResults {
-                    allResults.append(contentsOf: results)
-                }
-            }
+            // NOTE: Jamendo disabled — requires valid API key
+            // if selectedSource == nil || selectedSource == .jamendo {
+            //     async let jamendoResults = jamendo.search(query: searchQuery, limit: 20)
+            //     do {
+            //         let results = try await jamendoResults
+            //         allResults.append(contentsOf: results)
+            //     } catch {
+            //         errors.append("Jamendo: \(error.localizedDescription)")
+            //     }
+            // }
             
             if selectedSource == nil || selectedSource == .internetArchive {
-                async let archiveResults = archive.search(query: searchQuery, limit: 15)
-                if let results = try? await archiveResults {
+                async let archiveResults = archive.search(query: searchQuery, limit: 25)
+                do {
+                    let results = try await archiveResults
                     allResults.append(contentsOf: results)
+                } catch {
+                    errors.append("Internet Archive: \(error.localizedDescription)")
                 }
             }
             
             if selectedSource == nil || selectedSource == .localFiles {
                 async let localResults = localFiles.getImportedTracks()
-                if let results = try? await localResults {
+                do {
+                    let results = try await localResults
                     let filtered = results.filter {
                         $0.title.lowercased().contains(searchQuery.lowercased()) ||
                         $0.artist.lowercased().contains(searchQuery.lowercased())
                     }
                     allResults.append(contentsOf: filtered)
+                } catch {
+                    errors.append("Local files: \(error.localizedDescription)")
                 }
             }
             
@@ -71,6 +83,10 @@ final class SearchViewModel {
                 guard !seen.contains(track.id) else { return false }
                 seen.insert(track.id)
                 return true
+            }
+            
+            if searchResults.isEmpty && !errors.isEmpty {
+                searchError = errors.joined(separator: "\n")
             }
             
         } catch {

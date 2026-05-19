@@ -16,15 +16,32 @@ actor RadioEngine {
         
         var tracks: [Track] = []
         
-        // Fetch from multiple sources
-        async let jamendoTracks = fetchJamendoTracks()
-        async let archiveTracks = fetchArchiveTracks()
+        // Fetch from Internet Archive (no API key needed)
+        do {
+            let archiveTracks = try await fetchArchiveTracks()
+            tracks.append(contentsOf: archiveTracks)
+        } catch {
+            print("[RadioEngine] Archive fetch failed: \(error)")
+        }
         
-        let jamendo = try? await jamendoTracks
-        let archive = try? await archiveTracks
+        // Fallback to classical or old recordings if nothing found
+        if tracks.isEmpty {
+            do {
+                let classical = try await InternetArchiveService.shared.getClassicalCollection(limit: 15)
+                tracks.append(contentsOf: classical)
+            } catch {
+                print("[RadioEngine] Classical fallback failed: \(error)")
+            }
+        }
         
-        if let jamendo = jamendo { tracks.append(contentsOf: jamendo) }
-        if let archive = archive { tracks.append(contentsOf: archive) }
+        if tracks.isEmpty {
+            do {
+                let old = try await InternetArchiveService.shared.getOldRecordings(limit: 15)
+                tracks.append(contentsOf: old)
+            } catch {
+                print("[RadioEngine] Old recordings fallback failed: \(error)")
+            }
+        }
         
         // Shuffle intelligently - avoid same artist back to back
         tracks = intelligentShuffle(tracks)
@@ -38,18 +55,15 @@ actor RadioEngine {
         // Try to get a track that isn't recently played
         var attempts = 0
         while attempts < 10 {
-            async let jamendo = fetchSingleJamendo()
-            async let archive = fetchSingleArchive()
-            
-            let jamendoResult = try? await jamendo
-            let archiveResult = try? await archive
-            
-            if let track = jamendoResult ?? archiveResult {
+            do {
+                let track = try await fetchSingleArchive()
                 let recentlyPlayed = history.suffix(20).map { $0.id }
                 if !recentlyPlayed.contains(track.id) {
                     history.append(track)
                     return track
                 }
+            } catch {
+                print("[RadioEngine] Fetch next track failed: \(error)")
             }
             attempts += 1
         }
@@ -63,39 +77,20 @@ actor RadioEngine {
         history.removeAll()
     }
     
-    private func fetchJamendoTracks() async throws -> [Track] {
-        let genres = seedGenres.compactMap { $0.jamendoTag }
-        var allTracks: [Track] = []
-        
-        if let firstGenre = genres.first {
-            let tracks = try await JamendoService.shared.getByGenre(
-                MusicGenre(rawValue: firstGenre.capitalized) ?? .any,
-                limit: 15
-            )
-            allTracks.append(contentsOf: tracks)
-        }
-        
-        if allTracks.isEmpty {
-            let popular = try await JamendoService.shared.getPopular(limit: 20)
-            allTracks.append(contentsOf: popular)
-        }
-        
-        return allTracks
-    }
-    
     private func fetchArchiveTracks() async throws -> [Track] {
         if seedGenres.contains(.classical) {
             return try await InternetArchiveService.shared.getClassicalCollection(limit: 15)
         }
-        return try await InternetArchiveService.shared.getOldRecordings(limit: 10)
-    }
-    
-    private func fetchSingleJamendo() async throws -> Track {
-        let tracks = try await JamendoService.shared.getPopular(limit: 50)
-        guard let track = tracks.randomElement() else {
-            throw RadioError.noTracksAvailable
+        if seedGenres.contains(.jazz) {
+            return try await InternetArchiveService.shared.search(query: "jazz", limit: 15)
         }
-        return track
+        if seedGenres.contains(.blues) {
+            return try await InternetArchiveService.shared.search(query: "blues", limit: 15)
+        }
+        if seedGenres.contains(.rock) {
+            return try await InternetArchiveService.shared.search(query: "rock", limit: 15)
+        }
+        return try await InternetArchiveService.shared.getOldRecordings(limit: 20)
     }
     
     private func fetchSingleArchive() async throws -> Track {

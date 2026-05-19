@@ -166,7 +166,17 @@ final class AudioEngine: NSObject {
             self.currentIndex = queue.firstIndex(where: { $0.id == track.id }) ?? 0
         }
         
-        guard let url = track.streamURL else { return }
+        guard let url = track.streamURL else {
+            print("[AudioEngine] No streamURL for track: \(track.displayTitle)")
+            return
+        }
+        
+        // Clean up previous player
+        if let observer = timeObserver {
+            player?.removeTimeObserver(observer)
+            timeObserver = nil
+        }
+        cancellables.removeAll()
         
         let asset = AVAsset(url: url)
         playerItem = AVPlayerItem(asset: asset)
@@ -187,15 +197,16 @@ final class AudioEngine: NSObject {
         playerItem?.publisher(for: \.status)
             .receive(on: DispatchQueue.main)
             .sink { [weak self] status in
-                self?.isBuffering = status == .unknown
+                guard let self = self else { return }
+                self.isBuffering = status == .unknown
+                if status == .failed {
+                    print("[AudioEngine] PlayerItem failed: \(self.playerItem?.error?.localizedDescription ?? "unknown error")")
+                    self.isPlaying = false
+                }
             }
             .store(in: &cancellables)
         
         // Time observer
-        if let observer = timeObserver {
-            player?.removeTimeObserver(observer)
-        }
-        
         timeObserver = player?.addPeriodicTimeObserver(forInterval: CMTime(seconds: 0.5, preferredTimescale: 1000), queue: .main) { [weak self] time in
             self?.currentTime = CMTimeGetSeconds(time)
         }
@@ -205,6 +216,11 @@ final class AudioEngine: NSObject {
     }
     
     func play() {
+        guard player != nil else {
+            print("[AudioEngine] Cannot play — no player initialized")
+            isPlaying = false
+            return
+        }
         player?.play()
         player?.rate = playbackRate
         isPlaying = true
