@@ -5,47 +5,52 @@ struct MainPlayerView: View {
     @State private var skinManager = SkinManager.shared
     
     var body: some View {
-        ZStack {
-            skinManager.currentSkin.backgroundColor
+        GeometryReader { geo in
+            let w = geo.size.width
+            let h = geo.size.height
+            let isSmall = min(w, h) < 380
             
-            RustyTexture(opacity: skinManager.currentSkin.textureOpacity)
-            
-            VStack(spacing: 0) {
-                // Title Bar
-                titleBar
+            ZStack {
+                skinManager.currentSkin.backgroundColor
+                RustyTexture(opacity: skinManager.currentSkin.textureOpacity)
                 
-                // Main Display
-                displaySection
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                
-                // Spectrum Analyzer
-                SpectrumAnalyzer(
-                    data: viewModel.spectrumData,
-                    barColor: skinManager.currentSkin.ledColor,
-                    backgroundColor: skinManager.currentSkin.displayColor
-                )
-                .frame(height: 30)
-                .padding(.horizontal, 8)
-                .overlay(
-                    RoundedRectangle(cornerRadius: 1)
-                        .stroke(skinManager.currentSkin.bezelColor, lineWidth: 2)
-                )
-                
-                // Controls
-                controlsSection
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 6)
-                
-                // Seek Bar
-                seekBarSection
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 6)
-                
-                // Secondary Controls
-                secondaryControls
-                    .padding(.horizontal, 8)
-                    .padding(.bottom, 8)
+                VStack(spacing: 0) {
+                    // Title Bar
+                    titleBar
+                    
+                    // Main Display — takes remaining space
+                    displaySection(width: w, isSmall: isSmall)
+                        .padding(.horizontal, max(12, w * 0.03))
+                        .padding(.vertical, max(8, h * 0.015))
+                    
+                    // Spectrum Analyzer
+                    SpectrumAnalyzer(
+                        data: viewModel.spectrumData,
+                        barColor: skinManager.currentSkin.ledColor,
+                        backgroundColor: skinManager.currentSkin.displayColor
+                    )
+                    .frame(height: max(40, h * 0.06))
+                    .padding(.horizontal, max(12, w * 0.03))
+                    .overlay(
+                        RoundedRectangle(cornerRadius: 2)
+                            .stroke(skinManager.currentSkin.bezelColor, lineWidth: 2)
+                    )
+                    
+                    // Controls
+                    controlsSection(width: w, isSmall: isSmall)
+                        .padding(.horizontal, max(12, w * 0.03))
+                        .padding(.vertical, max(8, h * 0.015))
+                    
+                    // Seek Bar
+                    seekBarSection(width: w)
+                        .padding(.horizontal, max(12, w * 0.03))
+                        .padding(.bottom, max(8, h * 0.015))
+                    
+                    // Secondary Controls
+                    secondaryControls(width: w, isSmall: isSmall)
+                        .padding(.horizontal, max(12, w * 0.03))
+                        .padding(.bottom, max(16, h * 0.025))
+                }
             }
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -65,26 +70,26 @@ struct MainPlayerView: View {
     
     // MARK: - Title Bar
     private var titleBar: some View {
-        HStack(spacing: 4) {
+        HStack(spacing: 8) {
             Image(systemName: "train.side.front.car")
-                .font(.system(size: 14))
+                .font(.system(size: 16, weight: .medium))
                 .foregroundColor(skinManager.currentSkin.accentColor)
             
             Text(Constants.appName)
-                .font(.system(size: 12, weight: .bold, design: .monospaced))
+                .font(.system(size: 14, weight: .bold, design: .monospaced))
                 .foregroundColor(skinManager.currentSkin.textColor)
             
             Spacer()
             
             Button(action: { viewModel.isShowingSkinSelector = true }) {
                 Image(systemName: "paintbrush")
-                    .font(.system(size: 12))
+                    .font(.system(size: 14))
                     .foregroundColor(skinManager.currentSkin.textColor)
             }
             .buttonStyle(PlainButtonStyle())
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 8)
         .background(
             LinearGradient(
                 colors: [
@@ -104,110 +109,113 @@ struct MainPlayerView: View {
     }
     
     // MARK: - Display Section
-    private var displaySection: some View {
-        HStack(spacing: 8) {
+    private func displaySection(width: CGFloat, isSmall: Bool) -> some View {
+        let fontSizeLarge: CGFloat = isSmall ? 16 : 20
+        let fontSizeSmall: CGFloat = isSmall ? 12 : 14
+        let meterWidth: CGFloat = isSmall ? 16 : 20
+        
+        return HStack(spacing: 12) {
             // Time Display
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 LEDDisplay(
                     text: viewModel.formattedCurrentTime,
-                    fontSize: 14,
+                    fontSize: fontSizeLarge,
                     color: skinManager.currentSkin.ledColor,
                     backgroundColor: skinManager.currentSkin.displayColor
                 )
-                .frame(width: 60, height: 20)
+                .frame(width: max(70, width * 0.18), height: 28)
                 
                 LEDDisplay(
                     text: viewModel.formattedDuration,
-                    fontSize: 10,
+                    fontSize: fontSizeSmall,
                     color: skinManager.currentSkin.ledColor.opacity(0.7),
                     backgroundColor: skinManager.currentSkin.displayColor
                 )
-                .frame(width: 60, height: 14)
+                .frame(width: max(70, width * 0.18), height: 20)
             }
             
             // Title / Artist Display
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 MarqueeText(
                     text: viewModel.currentTrack?.displayTitle ?? "No Track",
-                    font: .system(size: 12, weight: .bold, design: .monospaced),
+                    font: .system(size: fontSizeLarge, weight: .bold, design: .monospaced),
                     color: skinManager.currentSkin.ledColor,
                     speed: 30
                 )
-                .frame(height: 18)
+                .frame(height: 26)
                 
                 MarqueeText(
                     text: viewModel.currentTrack?.displayArtist ?? "Select a track",
-                    font: .system(size: 10, design: .monospaced),
+                    font: .system(size: fontSizeSmall, design: .monospaced),
                     color: skinManager.currentSkin.ledColor.opacity(0.8),
                     speed: 25
                 )
-                .frame(height: 14)
+                .frame(height: 20)
                 
-                HStack(spacing: 4) {
+                HStack(spacing: 8) {
                     if viewModel.shuffleMode {
                         Image(systemName: "shuffle")
-                            .font(.system(size: 8))
+                            .font(.system(size: 10))
                             .foregroundColor(skinManager.currentSkin.accentColor)
                     }
                     if viewModel.repeatMode != .none {
                         Image(systemName: viewModel.repeatMode.icon)
-                            .font(.system(size: 8))
+                            .font(.system(size: 10))
                             .foregroundColor(skinManager.currentSkin.accentColor)
                     }
                     Spacer()
                 }
             }
             .frame(maxWidth: .infinity)
-            .padding(.horizontal, 4)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
             .background(skinManager.currentSkin.displayColor)
             .overlay(
-                RoundedRectangle(cornerRadius: 1)
+                RoundedRectangle(cornerRadius: 2)
                     .stroke(skinManager.currentSkin.bezelColor, lineWidth: 2)
             )
             
             // Peak Level Meters
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 PeakMeter(level: viewModel.peakLevels.first ?? 0, color: skinManager.currentSkin.ledColor)
                 PeakMeter(level: viewModel.peakLevels.last ?? 0, color: skinManager.currentSkin.ledColor)
             }
-            .frame(width: 12)
+            .frame(width: meterWidth)
         }
-        .frame(height: 70)
+        .frame(minHeight: 90)
     }
     
     // MARK: - Controls Section
-    private var controlsSection: some View {
-        HStack(spacing: 12) {
-            // Prev
-            WinampButton(icon: "backward.fill", size: 36) {
+    private func controlsSection(width: CGFloat, isSmall: Bool) -> some View {
+        let btnSize: CGFloat = isSmall ? 44 : 56
+        let playSize: CGFloat = isSmall ? 56 : 72
+        let smallBtnSize: CGFloat = isSmall ? 32 : 40
+        
+        return HStack(spacing: max(16, width * 0.04)) {
+            WinampButton(icon: "backward.fill", size: btnSize) {
                 viewModel.previousTrack()
             }
             
-            // Play / Pause
-            WinampButton(icon: viewModel.isPlaying ? "pause.fill" : "play.fill", size: 44) {
+            WinampButton(icon: viewModel.isPlaying ? "pause.fill" : "play.fill", size: playSize) {
                 viewModel.togglePlayPause()
             }
             
-            // Stop
-            WinampButton(icon: "stop.fill", size: 36) {
+            WinampButton(icon: "stop.fill", size: btnSize) {
                 viewModel.pause()
             }
             
-            // Next
-            WinampButton(icon: "forward.fill", size: 36) {
+            WinampButton(icon: "forward.fill", size: btnSize) {
                 viewModel.nextTrack()
             }
             
-            Spacer()
+            Spacer(minLength: 20)
             
-            // Shuffle
-            WinampButton(icon: "shuffle", size: 28) {
+            WinampButton(icon: "shuffle", size: smallBtnSize) {
                 viewModel.toggleShuffle()
             }
             .opacity(viewModel.shuffleMode ? 1.0 : 0.5)
             
-            // Repeat
-            WinampButton(icon: viewModel.repeatMode.icon, size: 28) {
+            WinampButton(icon: viewModel.repeatMode.icon, size: smallBtnSize) {
                 viewModel.toggleRepeat()
             }
             .opacity(viewModel.repeatMode != .none ? 1.0 : 0.5)
@@ -215,8 +223,8 @@ struct MainPlayerView: View {
     }
     
     // MARK: - Seek Bar
-    private var seekBarSection: some View {
-        VStack(spacing: 2) {
+    private func seekBarSection(width: CGFloat) -> some View {
+        VStack(spacing: 4) {
             SeekBar(
                 progress: viewModel.progress,
                 onSeek: { progress in
@@ -225,28 +233,32 @@ struct MainPlayerView: View {
                 color: skinManager.currentSkin.accentColor,
                 backgroundColor: skinManager.currentSkin.displayColor
             )
+            .frame(height: 16)
             
             HStack {
                 Text(viewModel.formattedCurrentTime)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(skinManager.currentSkin.textColor.opacity(0.7))
                 
                 Spacer()
                 
                 Text(viewModel.formattedDuration)
-                    .font(.system(size: 9, design: .monospaced))
+                    .font(.system(size: 11, design: .monospaced))
                     .foregroundColor(skinManager.currentSkin.textColor.opacity(0.7))
             }
         }
     }
     
     // MARK: - Secondary Controls
-    private var secondaryControls: some View {
-        HStack(spacing: 8) {
+    private func secondaryControls(width: CGFloat, isSmall: Bool) -> some View {
+        let btnWidth: CGFloat = isSmall ? 50 : 70
+        let btnHeight: CGFloat = isSmall ? 32 : 40
+        
+        return HStack(spacing: max(12, width * 0.03)) {
             // Volume
-            VStack(spacing: 2) {
+            VStack(spacing: 4) {
                 Image(systemName: "speaker.wave.2")
-                    .font(.system(size: 10))
+                    .font(.system(size: 14))
                     .foregroundColor(skinManager.currentSkin.textColor)
                 
                 VolumeSlider(
@@ -257,23 +269,20 @@ struct MainPlayerView: View {
                     color: skinManager.currentSkin.accentColor,
                     backgroundColor: skinManager.currentSkin.displayColor
                 )
-                .frame(width: 80)
+                .frame(width: max(100, width * 0.25))
             }
             
-            Spacer()
+            Spacer(minLength: 20)
             
-            // Playlist Button
-            WinampTextButton(title: "PLS", width: 40, height: 24) {
+            WinampTextButton(title: "PLS", width: btnWidth, height: btnHeight) {
                 viewModel.isShowingPlaylist = true
             }
             
-            // EQ Button
-            WinampTextButton(title: "EQ", width: 40, height: 24) {
+            WinampTextButton(title: "EQ", width: btnWidth, height: btnHeight) {
                 viewModel.isShowingEqualizer = true
             }
             
-            // Visualizer Button
-            WinampTextButton(title: "VIS", width: 40, height: 24) {
+            WinampTextButton(title: "VIS", width: btnWidth, height: btnHeight) {
                 viewModel.isShowingVisualizer = true
             }
         }
