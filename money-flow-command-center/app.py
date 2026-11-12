@@ -25,6 +25,7 @@ How to plug in better data later (search for "EXTENSION POINT" in this file):
 from __future__ import annotations
 
 import io
+import time
 import zlib
 from datetime import datetime, timezone
 
@@ -143,7 +144,9 @@ EXCLUDE_FROM_POOLS = {"Futures & Vol"}  # avoids double counting with the ETF po
 META["pool"] = [None if c in EXCLUDE_FROM_POOLS else POOL_OF.get((c, g), c) for c, g in zip(META["cls"], META["group"])]
 
 RISK_ON_BASKET = ["SPY", "QQQ", "IWM", "EEM", "HYG", "CPER"]  # equal-weight
-TIMEFRAMES = {"5D": 5, "20D": 20, "60D": 60, "120D": 120}
+DAILY_TF = {"5D": 5, "20D": 20, "60D": 60, "120D": 120}
+BARS_PER_DAY = 26                                  # 15-minute bars in one US session
+TIMEFRAMES = {"LIVE 1D": BARS_PER_DAY, **DAILY_TF}   # LIVE 1D runs the same engine on 15-minute bars
 DEFAULT_WEIGHTS = {"CMF": 30, "MFI": 20, "RS vs Peers": 10, "RS vs Risk-On": 10, "Flow Momentum": 15, "Volume Intensity": 15}
 COMP_COLS = list(DEFAULT_WEIGHTS)
 
@@ -257,8 +260,7 @@ def _clean(panels: dict) -> dict:
     return {k: v[good] for k, v in out.items()}
 
 
-@st.cache_data(ttl=900, show_spinner=False)
-def fetch_live(tickers: tuple, period: str = "2y"):
+def _download(tickers: tuple, period: str = "2y", interval: str = "1d"):
     """EXTENSION POINT: swap this for any other OHLCV vendor. Must return
     ({'Open','High','Low','Close','Volume'} -> DataFrame[date x ticker], failed_tickers)."""
     import yfinance as yf
@@ -271,7 +273,7 @@ def fetch_live(tickers: tuple, period: str = "2y"):
     for i in range(0, len(tick), 40):
         chunk = tick[i:i + 40]
         try:
-            raw = yf.download(chunk, period=period, interval="1d", auto_adjust=True, group_by="ticker",
+            raw = yf.download(chunk, period=period, interval=interval, auto_adjust=True, group_by="ticker",
                               threads=True, progress=False)
         except Exception:
             raw = pd.DataFrame()
@@ -286,7 +288,7 @@ def fetch_live(tickers: tuple, period: str = "2y"):
                 failed.append(t)
     for t in list(failed):  # one retry, individually
         try:
-            d = yf.Ticker(t).history(period=period, interval="1d", auto_adjust=True).dropna(subset=["Close"])
+            d = yf.Ticker(t).history(period=period, interval=interval, auto_adjust=True).dropna(subset=["Close"])
             if len(d) >= 30:
                 frames[t] = d
                 failed.remove(t)
@@ -296,10 +298,34 @@ def fetch_live(tickers: tuple, period: str = "2y"):
         return None, failed
     panels = {}
     for f in ["Open", "High", "Low", "Close", "Volume"]:
-        df = pd.DataFrame({t: d[f] for t, d in frames.items()})
-        df.index = pd.to_datetime(df.index).tz_localize(None).normalize()
+        intr = interval != "1d"
+        df = pd.DataFrame({t: (d[f].tz_convert("UTC") if intr and d.index.tz is not None else d[f]) for t, d in frames.items()})
+        idx = pd.to_datetime(df.index)
+        if not intr:
+            df.index = idx.tz_localize(None).normalize()
+        elif idx.tz is not None:
+            df.index = idx.tz_convert("America/New_York").tz_localize(None)
         panels[f] = df.groupby(level=0).last()
     return panels, failed
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def fetch_live(tickers: tuple, period: str = "2y"):
+    return _download(tickers, period, "1d")
+
+
+@st.cache_data(ttl=240, show_spinner=False)
+def fetch_bars(tickers: tuple):
+    """15-minute bars for the whole universe (last month), aligned to the US cash session (SPY's bars)
+    so every instrument is measured on the same clock. Returns panels or None."""
+    try:
+        P, _ = _download(tickers, "1mo", "15m")
+    except Exception:
+        return None
+    if P is None or "SPY" not in P["Close"].columns:
+        return None
+    anchor = P["Close"]["SPY"].dropna().index
+    return {k: (v.reindex(anchor).fillna(0.0) if k == "Volume" else v.ffill(limit=8).reindex(anchor)) for k, v in P.items()}
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
@@ -469,7 +495,7 @@ def composite(fp: dict, w: dict) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def compute(_P: dict, stamp: str, n: int, wt: tuple, extra: tuple):
+def compute(_P: dict, stamp: str, n: int, wt: tuple, extra: tuple, bpd: int = 1):
     """stamp/extra are cache keys only (data identity + off-universe tickers)."""
     w = dict(zip(COMP_COLS, wt))
     cols = _P["Close"].columns
@@ -485,7 +511,7 @@ def compute(_P: dict, stamp: str, n: int, wt: tuple, extra: tuple):
     snap["Return %"], snap["RVOL"] = fp["_ret"].iloc[-1] * 100, fp["_rvol"].iloc[-1]
     snap["Net $ Flow"], snap["Gross $"] = fp["_dollar"].iloc[-1], fp["_gross"].iloc[-1]
     snap["Last"] = _P["Close"].iloc[-1]
-    snap["1D %"] = _P["Close"].pct_change(fill_method=None).iloc[-1] * 100
+    snap["1D %"] = (_P["Close"].iloc[-1] / _P["Close"].iloc[-1 - bpd] - 1) * 100
     snap["Name"] = [META.loc[t, "name"] if t in META.index else t for t in snap.index]
     snap["Class"], snap["Group"] = classes, groups
     snap["Pool"] = [META.loc[t, "pool"] if t in META.index else None for t in snap.index]
@@ -519,6 +545,48 @@ def regime_table(P: dict, n: int) -> pd.DataFrame:
                      "Reads": "RISK-ON" if z * sgn > .25 else "RISK-OFF" if z * sgn < -.25 else "NEUTRAL",
                      "Trend": (s.tail(60) / s.tail(60).iloc[0]).round(4).tolist(), "_hist": hist})
     return pd.DataFrame(rows)
+
+
+def signal_frame(s5: pd.DataFrame, s20: pd.DataFrame, s60: pd.DataFrame) -> pd.DataFrame:
+    """Combine short, swing and positioning horizons into one plain-language signal per instrument."""
+    d = s20[["Name", "Class", "Group", "Return %", "Trend"]].copy()
+    d["5D"], d["20D"], d["60D"] = s5["Score"], s20["Score"], s60["Score"]
+    d["Totaal"] = .3 * d["5D"] + .4 * d["20D"] + .3 * d["60D"]
+    up = (d[["5D", "20D", "60D"]] > 10).all(axis=1)
+    dn = (d[["5D", "20D", "60D"]] < -10).all(axis=1)
+    d["Signaal"] = np.select([up & (d["Totaal"] > 35), up | (d["Totaal"] > 25), dn & (d["Totaal"] < -35), dn | (d["Totaal"] < -25)],
+                             ["STERK ▲", "POSITIEF ▲", "STERK ▼", "NEGATIEF ▼"], "NEUTRAAL")
+    d["Fase"] = np.select([d["5D"] > d["20D"] + 10, d["5D"] < d["20D"] - 10], ["versnelt", "verzwakt"], "stabiel")
+    return d
+
+
+@st.cache_data(ttl=900, show_spinner=False)
+def backtest(_score: pd.DataFrame, _close: pd.DataFrame, stamp: str, horizons: tuple = (5, 20)):
+    """Did a high score actually precede higher returns? On non-overlapping dates, rank the universe into
+    score quintiles and measure the average forward return of each. No look-ahead: the score at date t
+    only uses data up to t."""
+    cols = [c for c in _score.columns if c in META.index]
+    S, C = _score[cols], _close[cols]
+    rows, verdict = [], {}
+    for h in horizons:
+        fwd = C.shift(-h) / C - 1
+        q_rows = []
+        for dt in S.index[130:len(S) - h:h]:
+            sc, f = S.loc[dt], fwd.loc[dt]
+            ok = sc.notna() & f.notna()
+            if ok.sum() < 50:
+                continue
+            q = pd.qcut(sc[ok].rank(method="first"), 5, labels=False)
+            q_rows.append(f[ok].groupby(q).mean())
+        if len(q_rows) < 5:
+            continue
+        Q = pd.DataFrame(q_rows)
+        spread = Q[4] - Q[0]
+        t = float(spread.mean() / spread.std() * np.sqrt(len(spread))) if spread.std() > 0 else 0.0
+        for qi in range(5):
+            rows.append({"Horizon": f"{h}D", "Kwintiel": qi + 1, "ret": Q[qi].mean() * 100, "pos": (Q[qi] > 0).mean() * 100})
+        verdict[h] = (float(spread.mean() * 100), t, len(spread), float((spread > 0).mean() * 100))
+    return pd.DataFrame(rows), verdict
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -672,7 +740,7 @@ def volume_profile_fig(P, t, days=60):
 # 6. STATE, SIDEBAR, DATA LOAD
 # ════════════════════════════════════════════════════════════════════════════
 ss = st.session_state
-VIEWS = ["COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "METHODOLOGY"]
+VIEWS = ["SIGNALEN", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "METHODOLOGY"]
 if "pins" not in ss:
     qp = st.query_params.get("pins", "")
     ss.pins = [p for p in qp.split(",") if p] or ["SPY", "TLT", "GLD", "UUP", "HYG", "BTC-USD"]
@@ -683,9 +751,16 @@ ss.setdefault("pool", None)
 
 
 def goto(ticker=None, view="DEEP DIVE"):
-    if ticker:
-        ss.ticker = ticker
-    ss.view = view
+    """Queue a navigation. It is applied at the top of the next run, before the view widget exists
+    (Streamlit forbids changing a widget's value after it has been drawn)."""
+    ss["_goto"] = (ticker, view)
+
+
+if "_goto" in ss:                       # apply queued navigation before any widget is created
+    _t, _v = ss.pop("_goto")
+    if _t:
+        ss.ticker = _t
+    ss.view = _v
 
 
 def toggle_pin(t):
@@ -727,6 +802,7 @@ with st.sidebar:
                     help="Live = Yahoo Finance. Demo = synthetic data so the terminal can be explored offline.")
     if st.button("⟳ Refresh data", width="stretch"):
         st.cache_data.clear()
+    st.toggle("Auto-refresh (5 min)", key="auto", help="Herlaadt de pagina elke 5 minuten. Dagdata ververst elke 15 min, LIVE 1D elke 4 min.")
     sec("Composite weights")
     wt = tuple(st.slider(c, 0, 50, DEFAULT_WEIGHTS[c], 5, key=f"w_{c}") for c in COMP_COLS)
     if sum(wt) == 0:
@@ -753,7 +829,13 @@ if demo:
     P = make_demo(tickers)
 P = _clean(P)
 dropped = [t for t in tickers if t not in P["Close"].columns]
-stamp = f"{'demo' if demo else 'live'}|{P['Close'].index[-1]}|{P['Close'].shape}|{float(P['Close'].iloc[-1].sum()):.4f}"
+
+
+def mkstamp(X):
+    return f"{'demo' if demo else 'live'}|{X['Close'].index[-1]}|{X['Close'].shape}|{float(X['Close'].iloc[-1].sum()):.4f}"
+
+
+stamp = mkstamp(P)
 
 # ── header + global controls ────────────────────────────────────────────────
 asof = P["Close"].index[-1].strftime("%Y-%m-%d")
@@ -775,18 +857,48 @@ with st.expander("ⓘ  What do these “flows” represent? (read once)"):
 
 **Composite Money Flow Score** = weighted sum, −100 (heavy distribution) to +100 (heavy accumulation). **Net $ Flow** = Σ(close-location × typical price × volume) — a signed dollar-volume proxy, *not* fund subscriptions. The Sankey allocates net pressure between pools pro-rata; it is a model, not observed transfers. Full detail in **METHODOLOGY**.
 """)
-c1, c2 = st.columns([3, 1])
+c1, c2 = st.columns([2.2, 1])
 with c1:
     st.radio("View", VIEWS, key="view", horizontal=True, label_visibility="collapsed")
 with c2:
-    tf = st.radio("Timeframe", list(TIMEFRAMES), index=1, horizontal=True, label_visibility="collapsed", key="tf",
-                  help="Lookback for every flow metric. 5D = tactical, 20D = swing, 60D/120D = positioning.")
+    tf = st.radio("Timeframe", list(TIMEFRAMES), index=2, horizontal=True, label_visibility="collapsed", key="tf",
+                  help="Lookback for every flow metric. LIVE 1D = last session on 15-minute bars. 5D = tactical, 20D = swing, 60D/120D = positioning.")
 N = TIMEFRAMES[tf]
+PF, bpd = P, 1                      # PF = panels the flow engine runs on (daily, or 15-minute bars in LIVE 1D)
 
-snap, score_hist, dollar_hist, gross_hist = compute(P, stamp, N, wt, tuple(ss.extra))
+
+def get_bars():
+    """Cleaned 15-minute panels restricted to instruments that also have daily data, or None."""
+    if demo:
+        return None
+    with st.spinner("15-minutenkoersen ophalen…"):
+        B = fetch_bars(tickers)
+    if B is None:
+        return None
+    B = _clean(B)
+    keep_ = [c for c in B["Close"].columns if c in P["Close"].columns]
+    if len(keep_) < 20 or len(B["Close"]) < 150:
+        return None
+    return {k_: v_[keep_] for k_, v_ in B.items()}
+
+
+if tf == "LIVE 1D":
+    PB = get_bars()
+    keep = list(PB["Close"].columns) if PB is not None else []
+    if PB is None:
+        N = 5
+        st.markdown("<div class='banner'>LIVE 1D niet beschikbaar (" + ("demo-modus" if demo else "Yahoo gaf geen 15-minutenkoersen") +
+                    ") — 5D op dagkoersen wordt getoond.</div>", unsafe_allow_html=True)
+    else:
+        PF, bpd = PB, BARS_PER_DAY
+        st.markdown(f"<div class='note'>LIVE 1D · 15-minutenkoersen · laatste bar {PF['Close'].index[-1]:%d %b %H:%M} New York-tijd · "
+                    f"{len(keep)} instrumenten · Yahoo-koersen kunnen tot 15 min vertraagd zijn; buiten de Amerikaanse handelsuren zie je de laatste sessie.</div>",
+                    unsafe_allow_html=True)
+
+snap, score_hist, dollar_hist, gross_hist = compute(PF, mkstamp(PF), N, wt, tuple(ss.extra), bpd)
 uni = snap[snap.index.isin(META.index)]
 pt = pool_table(uni)
-reg = regime_table(P, N)
+reg = regime_table(PF, N)
 regime_score = float(reg["Vote"].mean()) if len(reg) else 0.0
 
 # ── KPI strip ───────────────────────────────────────────────────────────────
@@ -830,7 +942,13 @@ COLCFG = {
     "Net $ Flow": st.column_config.NumberColumn("Net $ Flow", format="compact"),
     "Flow % of $Vol": st.column_config.NumberColumn("Flow % $Vol", format="%+.1f%%"),
     "Gross $": st.column_config.NumberColumn("Gross $", format="compact"),
-    "Trend": st.column_config.LineChartColumn("60D", width="small"),
+    "Trend": st.column_config.LineChartColumn("Trend", width="small"),
+    "Live": st.column_config.NumberColumn("Live", format="%+.0f", help="Flow score vandaag, op 15-minutenkoersen"),
+    "5D": st.column_config.NumberColumn("5D", format="%+.0f", help="Flow score, laatste 5 handelsdagen"),
+    "20D": st.column_config.NumberColumn("20D", format="%+.0f", help="Flow score, laatste 20 handelsdagen"),
+    "60D": st.column_config.NumberColumn("60D", format="%+.0f", help="Flow score, laatste 60 handelsdagen"),
+    "Totaal": st.column_config.ProgressColumn("Totaal", min_value=-100, max_value=100, format="%+.0f",
+                                              help="30% × 5D + 40% × 20D + 30% × 60D"),
 }
 
 
@@ -838,8 +956,12 @@ def styled(df):
     def c(v):
         return f"color:{GREEN}" if v > 5 else f"color:{RED}" if v < -5 else f"color:{AMBER}"
     cols = [x for x in ["Score", "Δ Score", "CMF raw", "RS vs Peers", "RS vs Risk-On", "Return %", "Net $ Flow", "Flow % of $Vol",
-                        "Vote", "Move %", "Z"] if x in df.columns]
-    return df.style.map(lambda v: c(v * 100) if isinstance(v, (int, float)) and np.isfinite(v) else "", subset=cols)
+                        "Vote", "Move %", "Z", "Live", "5D", "20D", "60D", "Totaal"] if x in df.columns]
+    sty = df.style.map(lambda v: c(v * 100) if isinstance(v, (int, float)) and np.isfinite(v) else "", subset=cols)
+    if "Signaal" in df.columns:
+        sty = sty.map(lambda v: f"color:{GREEN};font-weight:700" if "▲" in str(v) else f"color:{RED};font-weight:700" if "▼" in str(v) else f"color:{DIM}",
+                      subset=["Signaal"])
+    return sty
 
 
 def table(df, key, h=420, cols=None):
@@ -848,9 +970,11 @@ def table(df, key, h=420, cols=None):
     ev = st.dataframe(styled(d), column_config=COLCFG, height=h, width="stretch", key=key, on_select="rerun",
                       selection_mode="single-row")
     rows = ev.selection.rows if ev and ev.selection else []
-    if rows:
-        return d.index[rows[0]]
-    return None
+    picked = d.index[rows[0]] if rows else None
+    if picked == ss.get(f"_sel_{key}"):   # already handled (selection survives reruns) -> don't navigate again
+        return None
+    ss[f"_sel_{key}"] = picked
+    return picked
 
 
 # ════════════════════════════════════════════════════════════════════════════
@@ -858,7 +982,114 @@ def table(df, key, h=420, cols=None):
 # ════════════════════════════════════════════════════════════════════════════
 view = ss.view
 
-if view == "COMMAND CENTER":
+if view == "SIGNALEN":
+    S3 = {k_: compute(P, stamp, n_, wt, tuple(ss.extra)) for k_, n_ in (("5D", 5), ("20D", 20), ("60D", 60), ("120D", 120))}
+    PBs = get_bars()
+    live = compute(PBs, mkstamp(PBs), BARS_PER_DAY, wt, tuple(ss.extra), BARS_PER_DAY)[0] if PBs is not None else None
+    if live is not None:
+        live = live[live.index.isin(META.index)]
+    s3 = {k_: v_[0][v_[0].index.isin(META.index)] for k_, v_ in S3.items()}
+    sig = signal_frame(s3["5D"], s3["20D"], s3["60D"])
+    if live is not None:
+        sig["Live"] = live["Score"].reindex(sig.index)
+    pt5, pt20 = pool_table(s3["5D"]), pool_table(s3["20D"])
+    reg20 = regime_table(P, 20)
+    rs20 = float(reg20["Vote"].mean()) if len(reg20) else 0.0
+    into = [f"<b style='color:{GREEN}'>{p}</b> ({pt20.loc[p, 'Score']:+.0f})" for p in pt20.index[:3] if pt20.loc[p, "Score"] > 5]
+    away = [f"<b style='color:{RED}'>{p}</b> ({pt20.loc[p, 'Score']:+.0f})" for p in pt20.index[::-1][:3] if pt20.loc[p, "Score"] < -5]
+    turn = (pt5["Score"] - pt20["Score"].reindex(pt5.index)).sort_values()
+    n_up, n_dn = int(sig["Signaal"].str.contains("▲").sum()), int(sig["Signaal"].str.contains("▼").sum())
+    rtxt = ("RISK-ON — beleggers zoeken risico op (aandelen, high yield, cyclische grondstoffen)" if rs20 > 15 else
+            "RISK-OFF — beleggers mijden risico (richting dollar, cash, obligaties)" if rs20 < -15 else
+            "GEMENGD — geen duidelijke richting tussen risico en veiligheid")
+    sec(f"Waar stroomt het geld naartoe? · stand per {asof}")
+    st.markdown(f"""<div class='kpi' style='font-family:{MONO};font-size:13px;line-height:1.9'>
+<b>Marktklimaat:</b> <span style='color:{col(rs20)}'>{rtxt}</span> (meter {rs20:+.0f})<br>
+<b>Geld stroomt naar</b> (20 dagen): {", ".join(into) or "geen enkele pool duidelijk positief"}<br>
+<b>Geld stroomt weg uit</b> (20 dagen): {", ".join(away) or "geen enkele pool duidelijk negatief"}<br>
+<b>Draait bij</b> (laatste 5 dagen sterker dan 20 dagen): <b style='color:{GREEN}'>{turn.index[-1]}</b> ({turn.iloc[-1]:+.0f} punten) ·
+<b>Verliest vaart:</b> <b style='color:{RED}'>{turn.index[0]}</b> ({turn.iloc[0]:+.0f} punten)<br>
+<b>Signalen:</b> <span style='color:{GREEN}'>{n_up} positief</span> · <span style='color:{RED}'>{n_dn} negatief</span> · {len(sig) - n_up - n_dn} neutraal
+van {len(sig)} instrumenten</div>""", unsafe_allow_html=True)
+
+    # ── where is money going, per horizon: live / short / medium / long ──
+    sec("Waar vloeit het geld · live, korte en lange termijn naast elkaar")
+    hz = {}
+    if live is not None:
+        hz["LIVE (vandaag)"] = pool_table(live)["Score"]
+    for lab_, k_ in (("KORT (5 dagen)", "5D"), ("MIDDEL (20 dagen)", "20D"), ("LANG (60 dagen)", "60D"), ("ZEER LANG (120 dagen)", "120D")):
+        hz[lab_] = pool_table(s3[k_])["Score"]
+    hm = pd.DataFrame(hz)
+    hm = hm.loc[hm["MIDDEL (20 dagen)"].sort_values().index]
+    fig = go.Figure(go.Heatmap(z=hm.values, x=hm.columns, y=hm.index, colorscale=SCALE, zmin=-70, zmax=70, xgap=3, ygap=3,
+                               text=hm.round(0).values, texttemplate="%{text:+.0f}", textfont=dict(size=13),
+                               colorbar=dict(thickness=10, tickfont=dict(size=9)), hovertemplate="%{y} · %{x}: %{z:+.1f}<extra></extra>"))
+    lay(fig, 30 * len(hm) + 70)
+    fig.update_xaxes(side="top")
+    show(fig)
+    st.markdown("<div class='note'>Groen = netto instroom, rood = netto uitstroom. Een rij die van links naar rechts overal groen is, trekt op elke "
+                "termijn geld aan; groen links maar rood rechts is een recente omslag." +
+                ("" if live is not None else " De LIVE-kolom ontbreekt omdat er nu geen 15-minutenkoersen beschikbaar zijn.") + "</div>",
+                unsafe_allow_html=True)
+
+    SIGCOLS = ["Name", "Group", "Signaal", "Fase", "Totaal"] + (["Live"] if live is not None else []) + ["5D", "20D", "60D", "Return %", "Trend"]
+    a, b = st.columns(2)
+    with a:
+        sec("Sterkste instroom · alle horizonten · klik een rij voor details")
+        pick = table(sig.sort_values("Totaal", ascending=False).head(15), "sig_in", 560, SIGCOLS)
+        if pick:
+            goto(pick); st.rerun()
+    with b:
+        sec("Sterkste uitstroom · alle horizonten · klik een rij voor details")
+        pick = table(sig.sort_values("Totaal").head(15), "sig_out", 560, SIGCOLS)
+        if pick:
+            goto(pick); st.rerun()
+
+    sec("Hoe betrouwbaar is dit signaal? · toets op de afgelopen 2 jaar van dit universum")
+    bt, verdict = backtest(S3["20D"][1], P["Close"], stamp)
+    c1_, c2_ = st.columns([1.3, 1])
+    with c1_:
+        if len(bt):
+            fig = go.Figure()
+            for hz, c_ in (("5D", CYAN), ("20D", AMBER)):
+                d_ = bt[bt["Horizon"] == hz]
+                fig.add_trace(go.Bar(x=[f"Q{q}" for q in d_["Kwintiel"]], y=d_["ret"], name=f"rendement na {hz}", marker_color=c_,
+                                     text=[f"{v:+.2f}%" for v in d_["ret"]], textposition="outside", cliponaxis=False,
+                                     hovertemplate="%{x} · %{y:+.2f}%<extra>" + hz + "</extra>"))
+            lay(fig, 330, barmode="group", title=dict(text="GEMIDDELD RENDEMENT NA HET SIGNAAL · Q1 = laagste 20D-scores · Q5 = hoogste",
+                                                      font=dict(size=11, color=DIM)))
+            fig.update_layout(showlegend=True, legend=dict(orientation="h", y=-0.12, font=dict(size=10)))
+            show(fig)
+        else:
+            st.info("Te weinig historie voor een toets.")
+    with c2_:
+        lines = []
+        for h_, (sp, t_, n_, pos_) in verdict.items():
+            if sp > 0 and t_ > 2:
+                v_txt, v_col = "bruikbare voorsprong", GREEN
+            elif sp > 0:
+                v_txt, v_col = "zwak positief, statistisch niet overtuigend", AMBER
+            else:
+                v_txt, v_col = "geen voorspellende waarde in deze periode", RED
+            lines.append(f"<b>{h_} dagen vooruit:</b> hoogste scores deden het gemiddeld <b style='color:{col(sp * 20)}'>{sp:+.2f}%</b> "
+                         f"{'beter' if sp > 0 else 'slechter'} dan de laagste, in {pos_:.0f}% van {n_} meetmomenten "
+                         f"(t = {t_:+.1f}). Oordeel: <b style='color:{v_col}'>{v_txt}</b>.")
+        st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12px;line-height:1.8'>" + "<br><br>".join(lines) +
+                    f"<br><br><span style='color:{DIM}'>Methode: op niet-overlappende data het universum in vijf groepen naar 20D-score, "
+                    "daarna het werkelijke rendement gemeten. Geen kosten, geen voorkennis van latere koersen. "
+                    "Resultaten uit het verleden zeggen niets zeker over de toekomst.</span></div>", unsafe_allow_html=True)
+
+    with st.expander("Hoe lees ik dit?"):
+        st.markdown("""
+- **Score** (−100 tot +100): hoe sterk er netto gekocht (+) of verkocht (−) wordt, afgeleid uit koers × volume. Geen echte geldstroomcijfers; die zijn niet gratis beschikbaar.
+- **5D / 20D / 60D**: dezelfde score over de laatste 5, 20 en 60 handelsdagen. **Totaal** weegt ze 30/40/30.
+- **Signaal**: `STERK ▲` = alle drie de horizonten positief én totaal boven +35. `POSITIEF ▲` = alle drie positief of totaal boven +25. De ▼-varianten zijn het spiegelbeeld.
+- **Fase**: *versnelt* = de korte termijn is sterker dan de middellange (instroom neemt toe); *verzwakt* = het omgekeerde.
+- **LIVE 1D** (rechtsboven): dezelfde berekening op 15-minutenkoersen van de laatste handelsdag, voor de andere schermen.
+- Dit zijn signalen, geen advies op maat. Het blok *Hoe betrouwbaar* laat zien of ze in dit universum historisch iets voorspelden.
+""")
+
+elif view == "COMMAND CENTER":
     a, b = st.columns([1.7, 1])
     with a:
         sec(f"Global money flow · {tf} · net rotation between pools")
@@ -906,9 +1137,14 @@ if view == "COMMAND CENTER":
 
     sec(f"Pool flow score history · {tf} lookback, last 120 sessions")
     ph = pd.DataFrame({p: score_hist[[t for t in uni.index[uni["Pool"] == p]]].mean(axis=1) for p in pt.index}).tail(120)
+    if bpd > 1:
+        ph.index = ph.index.strftime("%d %b %H:%M")
     fig = go.Figure(go.Heatmap(z=ph.T.values, x=ph.index, y=ph.columns, colorscale=SCALE, zmin=-80, zmax=80,
                                colorbar=dict(thickness=10, tickfont=dict(size=9)), hovertemplate="%{y} · %{x|%d %b}: %{z:+.0f}<extra></extra>"))
-    show(lay(fig, 330))
+    lay(fig, 330)
+    if bpd > 1:
+        fig.update_xaxes(type="category", nticks=8)
+    show(fig)
 
     l, r_ = st.columns(2)
     with l:
@@ -934,7 +1170,7 @@ elif view == "HEATMAP":
 
     sec("Group × timeframe matrix · where short and medium term agree")
     mat = {}
-    for lab, n_ in TIMEFRAMES.items():
+    for lab, n_ in DAILY_TF.items():
         s_, *_ = compute(P, stamp, n_, wt, tuple(ss.extra))
         s_ = s_[s_.index.isin(META.index)]
         mat[lab] = s_.groupby(["Class", "Group"])["Score"].mean()
@@ -1002,7 +1238,7 @@ elif view == "DEEP DIVE":
 
     g1, g2 = st.columns([2.2, 1])
     with g1:
-        show(price_flow_fig(P, t, N))
+        show(price_flow_fig(P, t, N if bpd == 1 else 5))
     with g2:
         show(volume_profile_fig(P, t))
 
@@ -1193,3 +1429,12 @@ if bad:
         st.write(", ".join(bad))
 st.markdown("<div class='note' style='margin-top:10px'>Flows are price × volume proxies, not reported fund flows. Data: Yahoo Finance, FRED, CFTC. "
             "Not investment advice.</div>", unsafe_allow_html=True)
+
+# ── optional auto-refresh: a timer fragment that reruns the whole app ─────────
+ss["_last_run"] = time.time()
+if ss.get("auto"):
+    @st.fragment(run_every=300)
+    def _tick():
+        if time.time() - ss.get("_last_run", 0) > 290:
+            st.rerun()
+    _tick()

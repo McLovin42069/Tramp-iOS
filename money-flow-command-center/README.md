@@ -63,3 +63,14 @@ Search `EXTENSION POINT` in `app.py`: ETF shares-outstanding deltas for true cre
 CFTC TFF/disaggregated reports, Treasury fiscal-data API for daily TGA, or another OHLCV vendor in `fetch_live`.
 
 Not investment advice.
+
+## Signals, live mode and reliability test
+
+- **SIGNALEN** (default view, Dutch): plain-language summary of where money is flowing, a pool matrix across
+  live / 5D / 20D / 60D / 120D, and ranked inflow/outflow candidates with a combined signal.
+- **LIVE 1D** timeframe: the same flow engine on 15-minute bars of the latest US session (Yahoo, up to 15 min delayed).
+- **Reliability test**: ranks the universe into score quintiles on non-overlapping dates over the last 2 years and
+  reports the realised forward return of each, so you can see whether the score had predictive value.
+- **Auto-refresh** toggle in the sidebar reloads every 5 minutes.
+
+To update an existing install, run `install-money-flow.sh` again.
