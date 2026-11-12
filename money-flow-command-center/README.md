@@ -82,3 +82,12 @@ To update an existing install, run `install-money-flow.sh` again.
 - **HANDLEIDING.md / HANDLEIDING.pdf**: Dutch user manual, also shown inside the app.
 - **Desktop app**: the installer adds a "Money Flow" launcher (menu + desktop) that opens the app in its own
   chromeless window via Brave/Chromium/Chrome `--app` mode and starts the server if needed.
+
+## Extended universe, analyst and paper trading
+
+- **Universe**: 143 core cross-asset instruments + ~690 single stocks (US incl. Nasdaq, Europe, Asia) in `STOCKS`.
+  Stock history (10y) is cached on disk in `cache/` for 6 hours; the app does not need to keep running to collect data.
+- **Model inputs**: 35 features incl. momentum, volatility, cross-asset regime, VIX, CFTC positioning and (when reachable) FRED.
+  Forward returns are measured from the next day's close to avoid same-day timing leakage across time zones.
+- **ANALIST** popup: rule-based shortlist with reasons, cautions and inverse-volatility weights.
+- **PORTEFEUILLE**: paper trading with FX conversion, fees, positions, P&L and equity history (`cache/portfolio.json`).

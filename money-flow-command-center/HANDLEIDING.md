@@ -6,7 +6,7 @@ Deze handleiding legt uit wat de app doet, hoe je hem start en hoe je elk scherm
 
 ## 1. Wat is dit?
 
-De Money Flow Command Center laat zien **waar geld naartoe stroomt en waar het vandaan komt** op de wereldmarkten: aandelen, obligaties, grondstoffen, valuta, futures en crypto. Hij volgt 143 instrumenten en rekent voor elk daarvan een **geldstroomscore** uit van −100 (er wordt zwaar verkocht) tot +100 (er wordt zwaar gekocht).
+De Money Flow Command Center laat zien **waar geld naartoe stroomt en waar het vandaan komt** op de wereldmarkten: aandelen, obligaties, grondstoffen, valuta, futures en crypto. Hij volgt ruim 800 instrumenten: 143 kerninstrumenten (indexfondsen, obligaties, grondstoffen, valuta, futures, crypto) en circa 690 losse aandelen uit de Verenigde Staten (inclusief de Nasdaq), Europa en Azië. Voor elk daarvan rekent hij een **geldstroomscore** uit van −100 (er wordt zwaar verkocht) tot +100 (er wordt zwaar gekocht).
 
 Drie dingen om vooraf te weten:
 
@@ -23,7 +23,11 @@ Drie dingen om vooraf te weten:
 - **Op de pc:** dubbelklik op het icoon **Money Flow** op je bureaublad of zoek "Money Flow" in het programmamenu. De app opent in een eigen venster, zonder adresbalk.
 - **Op je telefoon** (zelfde wifi-netwerk): open in de browser `http://<ip-adres-van-de-pc>:8501`. Het adres staat in de laatste regel die de installer toonde. Zet het daarna op je beginscherm via *Deel → Zet op beginscherm*.
 
-De eerste keer laden duurt 20 tot 40 seconden, omdat dan vijf jaar koersen worden opgehaald. Daarna wordt alles 15 minuten onthouden.
+De allereerste keer laden duurt 2 tot 3 minuten, omdat dan tien jaar koersen van alle instrumenten worden opgehaald. Daarna staan de aandelen 6 uur op schijf en ververst alleen de kern elke 15 minuten; opstarten duurt dan ongeveer een halve minuut.
+
+### Moet de app blijven draaien om data te verzamelen?
+
+Nee. Yahoo Finance bewaart de volledige koershistorie. Elke keer dat je de app opent, haalt hij op wat hij nodig heeft, ook als de pc weken uit heeft gestaan. Je mist dus niets door hem af te sluiten. Twee dingen worden wel op je pc bewaard, in de map `cache`: de laatst opgehaalde aandelenkoersen (om sneller te starten) en je papieren portefeuille.
 
 ### Stoppen en herstarten
 
@@ -53,12 +57,14 @@ Voer een nieuwere `install-money-flow.sh` opnieuw uit. Die overschrijft de oude 
 - **Search any ticker** — typ een symbool (`NVDA`) of een naam (`gold`) en druk op Enter. Elk symbool dat Yahoo Finance kent werkt, ook buiten de 143 standaardinstrumenten, bijvoorbeeld `ASML.AS` of `^AEX`.
 - **Live / Demo** — *Live* gebruikt echte koersen. *Demo* gebruikt verzonnen oefendata; er staat dan een oranje balk bovenaan.
 - **Refresh data** — haalt alle koersen opnieuw op.
+- **Aandelen wereldwijd** — laadt ook de circa 690 losse aandelen. Zet dit uit als je alleen de 143 kerninstrumenten wilt zien; de app start dan sneller.
 - **Auto-refresh (5 min)** — herlaadt de pagina elke vijf minuten.
 - **Composite weights** — hoe zwaar elk onderdeel in de score meetelt. Laat dit staan tot je weet wat je doet.
 
 **Bovenbalk**
 
-- **Schermkeuze** — de negen schermen uit hoofdstuk 4.
+- **Schermkeuze** — de tien schermen uit hoofdstuk 4.
+- **Knop ANALIST** — opent een venster met koopkandidaten en uitleg (zie 4.10).
 - **Tijdsbalk** — over welke periode de stromen gemeten worden:
 
 | Keuze | Betekenis | Gebruik |
@@ -102,7 +108,7 @@ Klik op een rij om de detailpagina van dat instrument te openen.
 
 ![Voorspelling](docs/voorspelling.png)
 
-Een model dat uit vijf jaar historie leert welke geldstroompatronen aan koersstijgingen voorafgingen, en daarmee een verwachting voor de komende weken geeft.
+Een model dat uit tien jaar historie van alle instrumenten leert welke patronen aan koersstijgingen voorafgingen, en daarmee een verwachting voor de komende weken geeft. Het gebruikt 35 kenmerken: geldstromen op drie termijnen, koersmomentum, beweeglijkheid, en marktbrede gegevens zoals de verhouding tussen aandelen en obligaties, de VIX en de posities van speculanten op de termijnmarkten.
 
 - **Voorspellend? · eindtoets** — de belangrijkste tegel: *JA — AANTOONBAAR*, *ZWAK* of *NEE*. Hij zegt of het model op data die het nooit gezien heeft beter dan toeval rangschikte.
 - **Rangcorrelatie (IC)** en **t** — hoe goed de voorspelde volgorde overeenkwam met de werkelijke. Een t boven 2 geldt als statistisch overtuigend.
@@ -110,7 +116,7 @@ Een model dat uit vijf jaar historie leert welke geldstroompatronen aan koerssti
 - **Hoogste / laagste modelverwachting** — de actuele voorspelling. *Model* +100 betekent: verwacht bij de best presterende; −100: bij de slechtste. Het is een rangorde, geen koersdoel.
 - **Zelf-afstelling** — alle instellingen die het model op zichzelf heeft uitgeprobeerd, met de gekozen instelling gemarkeerd.
 
-Het model traint en stelt zichzelf opnieuw af bij elke verversing van de data, maximaal eens per uur. De eerste keer duurt dat ongeveer een minuut.
+Het model traint en stelt zichzelf opnieuw af zodra er een nieuwe handelsdag aan data is. Dat duurt 1 tot 3 minuten; daarna staat het resultaat op schijf en opent het scherm direct.
 
 ### 4.3 COMMAND CENTER
 
@@ -155,6 +161,37 @@ De exacte formules, de huidige gewichten, de beperkingen en de volledige lijst v
 
 Deze handleiding, in de app zelf.
 
+### 4.10 ANALIST — de knop rechtsboven
+
+![Analist](docs/analist.png)
+
+De analist legt alle data naast elkaar en geeft een korte lijst koopkandidaten met uitleg. Hij is een vaste rekenregel, geen mens en geen taalmodel.
+
+- **Waar zoeken** — alles, alleen de kern, of aandelen uit de VS, Europa of Azië.
+- **Marktbeeld** — het klimaat en hoe zwaar het voorspelmodel meeweegt. Is het model niet overtuigend, dan telt het voor 30% en de geldstromen voor 70%. Is het aantoonbaar voorspellend, dan telt het voor 60%.
+- **Koopkandidaten** — per kandidaat: *Waarom* (wat de data laat zien), *Let op* (risico's zoals oververhitting, hoge beweeglijkheid of een buitenlandse notering) en een **voorgesteld gewicht**. Rustige instrumenten krijgen een groter gewicht dan wilde.
+- **Koop deze selectie op papier** — zet de kandidaten met de voorgestelde gewichten in je papieren portefeuille, zodat je kunt volgen hoe het advies uitpakt zonder echt geld.
+- **Nu liever niet** — de instrumenten met de sterkste uitstroom.
+- **Hoe pak je het aan** — zes vuistregels voor spreiden, instappen en uitstappen.
+
+Een kandidaat moet aan vier eisen voldoen: positieve geldstroom op 20 dagen, een positieve totaalscore, een positieve gecombineerde kans, en niet oververhit (MFI onder 90). Voldoet niets, dan zegt de analist dat ook.
+
+### 4.11 PORTEFEUILLE — oefenen met gesimuleerd geld
+
+![Portefeuille](docs/portefeuille.png)
+
+Hier koop en verkoop je met nepgeld tegen echte koersen, om te testen of de signalen voor jou werken.
+
+- **Start** — je begint met 100.000 euro. Basisvaluta, startkapitaal en transactiekosten pas je aan onder *Instellingen*.
+- **Order plaatsen** — kies een instrument, *KOOP* of *VERKOOP*, en een bedrag (koop) of aantal (verkoop; 0 betekent alles). De order wordt direct uitgevoerd tegen de laatste koers.
+- **Valuta** — buitenlandse aandelen worden automatisch omgerekend naar je basisvaluta.
+- **Posities** — aantal, aankoopprijs, huidige koers, waarde, resultaat en de actuele geldstroomscore. Zakt die score onder nul, dan verschijnt een oranje melding om de positie te herbeoordelen.
+- **Waardeverloop** — elke dag dat je dit scherm opent, wordt de waarde vastgelegd. De grafiek groeit dus alleen op dagen dat je kijkt.
+- **Transacties** — alle orders, met kosten.
+- **Opnieuw beginnen** — vink het vakje aan onder *Instellingen* en klik *Opslaan*.
+
+De portefeuille staat in `~/money-flow-command-center/cache/portfolio.json` en blijft bewaard bij herstarten en bijwerken.
+
 ---
 
 ## 5. Begrippen
@@ -183,6 +220,8 @@ Deze handleiding, in de app zelf.
 4. **De detailpagina openen.** Controleer of de score door meerdere onderdelen wordt gedragen en of het instrument sterker is dan zijn groep.
 5. **Het oordeel in VOORSPELLING lezen.** Staat daar geen aantoonbare voorspellende waarde, behandel het signaal dan als een aanwijzing om verder te onderzoeken en niet als een koopopdracht.
 
+De snelle route: klik op **ANALIST**, lees de kandidaten met hun *Waarom* en *Let op*, en kies **Koop deze selectie op papier**. Volg het resultaat een paar weken in **PORTEFEUILLE** voordat je echt geld overweegt.
+
 ---
 
 ## 7. Betrouwbaarheid en grenzen
@@ -198,6 +237,11 @@ De app toetst zichzelf op twee plaatsen, en je hoort beide uitkomsten te kennen.
 3. Het oordeel komt uit een latere **eindtoetsperiode** die bij het kiezen niet is gebruikt.
 
 Stap 3 is bewust zo streng. Een model dat mag blijven sleutelen tot dezelfde testdata er goed uitziet, vindt altijd iets dat overtuigend lijkt, ook in puur toeval. Zo'n model faalt met echt geld. Daarom kan de app eerlijk uitkomen op *zwak* of *geen voorspellende waarde*; dat is dan de werkelijke stand, geen fout.
+
+Twee bekende vertekeningen:
+
+- **Alleen overlevers.** De aandelenlijst bestaat uit de grote bedrijven van vandaag. Bedrijven die in tien jaar zijn verdwenen of gekrompen ontbreken, waardoor rendementen in de toetsen iets te rooskleurig zijn.
+- **Instappen een dag later.** De toetsen rekenen met aankoop op de slotkoers van de dag ná het signaal. Dat is realistisch, en het voorkomt dat Amerikaans nieuws van dezelfde dag ten onrechte als voorspelling van Aziatische en Europese koersen meetelt.
 
 Wat de app niet kan:
 
@@ -217,14 +261,16 @@ Wat de app niet kan:
 | Telefoon krijgt geen verbinding | Controleer of de telefoon op hetzelfde wifi-netwerk zit. Zet de poort open: `sudo ufw allow 8501/tcp`. |
 | LIVE 1D geeft een oranje balk | Yahoo gaf geen 15-minutenkoersen; de app toont dan 5D. Probeer het later opnieuw. |
 | Een ticker wordt niet gevonden | Gebruik de schrijfwijze van Yahoo Finance: `ASML.AS`, `BMW.DE`, `^AEX`, `EURUSD=X`, `BTC-USD`. |
-| VOORSPELLING duurt lang | De eerste keer traint het model ongeveer een minuut. Daarna wordt het resultaat een uur onthouden. |
+| VOORSPELLING of ANALIST duurt lang | De eerste keer per handelsdag traint het model 1 tot 3 minuten. Daarna opent het direct. |
+| Opstarten duurt minuten | De eerste keer worden tien jaar koersen van ruim 800 instrumenten opgehaald. Zet *Aandelen wereldwijd* uit voor een snelle start. |
+| Een aandeel ontbreekt | Typ het symbool in het zoekveld; het wordt dan opgehaald. Om het blijvend toe te voegen, zie hoofdstuk 9. |
 | Foutmeldingen bekijken | `journalctl --user -u money-flow -n 50` |
 
 ---
 
 ## 9. Zelf instrumenten toevoegen
 
-Open `~/money-flow-command-center/app.py` in een teksteditor. Bovenaan staat de lijst `U`. Voeg een regel toe in dezelfde vorm:
+Open `~/money-flow-command-center/app.py` in een teksteditor. Losse aandelen voeg je toe aan de lijst `STOCKS`: zet het Yahoo-symbool in de regel van de juiste regio, gescheiden door een spatie, eventueel met een naam erachter (`ASML.AS=ASML`). Andere instrumenten voeg je toe aan de lijst `U` bovenaan, in deze vorm:
 
 ```python
 ("ASML.AS", "ASML", "Europe Equities", "Europe"),
