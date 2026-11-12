@@ -27,6 +27,7 @@ from __future__ import annotations
 import io
 import time
 import zlib
+from pathlib import Path
 from datetime import datetime, timezone
 
 import numpy as np
@@ -310,7 +311,7 @@ def _download(tickers: tuple, period: str = "2y", interval: str = "1d"):
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def fetch_live(tickers: tuple, period: str = "2y"):
+def fetch_live(tickers: tuple, period: str = "5y"):          # 5 years so the model has history to learn from
     return _download(tickers, period, "1d")
 
 
@@ -329,7 +330,7 @@ def fetch_bars(tickers: tuple):
 
 
 @st.cache_data(ttl=3600, show_spinner=False)
-def make_demo(tickers: tuple, n: int = 520):
+def make_demo(tickers: tuple, n: int = 900):
     """Deterministic synthetic OHLCV with class/group factor structure. Used ONLY when live data is
     unreachable or Demo mode is selected; the UI shows a banner whenever this is active."""
     idx = pd.bdate_range(end=pd.Timestamp.today().normalize(), periods=n)
@@ -589,6 +590,118 @@ def backtest(_score: pd.DataFrame, _close: pd.DataFrame, stamp: str, horizons: t
     return pd.DataFrame(rows), verdict
 
 
+# ── machine-learning forecast with honest self-tuning ───────────────────────
+# Candidate settings the model tries on itself: (forecast horizon in days, tree depth, min samples per leaf)
+ML_CONFIGS = [(h, d, leaf) for h in (10, 20, 40) for d, leaf in ((2, 400), (3, 200))]
+
+
+def _fit_predict(Xtr, ytr, Xte, depth=3, leaf=200):
+    """Gradient-boosted trees (scikit-learn). Falls back to ridge regression if scikit-learn is missing."""
+    try:
+        from sklearn.ensemble import HistGradientBoostingRegressor
+        m = HistGradientBoostingRegressor(max_iter=80, learning_rate=0.08, max_depth=depth, min_samples_leaf=leaf,
+                                          l2_regularization=1.0, random_state=0)
+        m.fit(Xtr, ytr)
+        return m.predict(Xte), "Gradient boosting (scikit-learn)"
+    except ImportError:
+        mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-9
+        A = (Xtr - mu) / sd
+        w = np.linalg.solve(A.T @ A + 50.0 * np.eye(A.shape[1]), A.T @ (ytr - ytr.mean()))
+        return ((Xte - mu) / sd) @ w + ytr.mean(), "Ridge-regressie (numpy)"
+
+
+def _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start):
+    """Train on the past only (with an h-day gap so no future leaks in), predict the next block, repeat.
+    Returns one row per non-overlapping test date: (date position, rank-IC, top-bottom spread, quintile returns)."""
+    lab = valid & ~np.isnan(Y)
+    gap = int(np.ceil(h / step)) + 1
+    PR = np.full(Y.shape, np.nan)
+    for i0 in range(start, len(Y), retrain):
+        tr = lab[: max(i0 - gap, 0)]
+        te = valid[i0:i0 + retrain]
+        if tr.sum() < 3000 or not te.any():
+            continue
+        pred, _ = _fit_predict(F[: i0 - gap][tr], Y[: i0 - gap][tr], F[i0:i0 + retrain][te], depth, leaf)
+        blk = PR[i0:i0 + retrain]
+        blk[te] = pred
+    rows = []
+    for i in range(start, len(Y), gap):
+        ok = ~np.isnan(PR[i]) & ~np.isnan(R[i])
+        if ok.sum() < 50:
+            continue
+        p, r = pd.Series(PR[i][ok]), pd.Series(R[i][ok])
+        qm = r.groupby(pd.qcut(p.rank(method="first"), 5, labels=False)).mean()
+        rows.append((i, p.corr(r, method="spearman"), qm.iloc[-1] - qm.iloc[0], qm.values))
+    return rows, lab
+
+
+def _metrics(rows):
+    ic, sp = np.array([r[1] for r in rows]), np.array([r[2] for r in rows])
+    t = lambda x: float(x.mean() / x.std(ddof=1) * np.sqrt(len(x))) if len(x) > 2 and x.std(ddof=1) > 0 else 0.0
+    return {"ic": float(ic.mean()), "ic_t": t(ic), "spread": float(sp.mean() * 100), "spread_t": t(sp),
+            "hit": float((sp > 0).mean() * 100), "n": len(rows), "quint": np.mean([r[3] for r in rows], axis=0) * 100}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def ml_forecast(_P: dict, stamp: str, step: int = 3, retrain: int = 30):
+    """Learn from history which flow patterns preceded out-performance, tune itself, and report honestly.
+
+    Features : 6 flow components on 5D/20D/60D lookbacks + volatility-scaled momentum on 5/20/60/120D (22 inputs).
+    Target   : cross-sectional rank of the return over the NEXT h trading days.
+    Tuning   : every setting in ML_CONFIGS is walked forward through history. The setting that ranks best on the
+               VALIDATION period (first 65% of the test span) is selected.
+    Verdict  : measured only on the HOLD-OUT period (last 35%), which played no part in choosing the setting.
+               Tuning until the same test data looks significant would manufacture a false result, so the
+               hold-out is looked at exactly once.
+    Returns None when there is too little history."""
+    cols = [c for c in _P["Close"].columns if c in META.index]
+    P_ = {k: v[cols] for k, v in _P.items()}
+    groups, classes = META.loc[cols, "group"], META.loc[cols, "cls"]
+    C = P_["Close"]
+    r1 = C.pct_change(fill_method=None)
+    feats = {}
+    for n in (5, 20, 60):
+        fp = flow_panels(P_, n, groups, classes)
+        for c in COMP_COLS:
+            feats[f"{c} · {n}D"] = fp[c]
+    for n in (5, 20, 60, 120):
+        feats[f"Momentum · {n}D"] = np.tanh((C / C.shift(n) - 1) / (r1.rolling(60, min_periods=20).std() * np.sqrt(n)))
+    names = list(feats)
+    dates = C.index[130::step]
+    if len(dates) < 160:
+        return None
+    F = np.stack([feats[k].reindex(dates).values for k in names], axis=2)        # (dates, tickers, features)
+    valid = ~np.isnan(F).any(axis=2)
+    start = max(int(250 / step), int(len(dates) * 0.3))
+    split = start + int((len(dates) - start) * 0.65)
+    trials = []
+    for h, depth, leaf in ML_CONFIGS:
+        fwd = C.shift(-h) / C - 1
+        Y, R = (fwd.rank(axis=1, pct=True) - 0.5).reindex(dates).values, fwd.reindex(dates).values
+        rows, lab = _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start)
+        val, hold = [r for r in rows if r[0] < split], [r for r in rows if r[0] >= split]
+        if len(val) < 6 or len(hold) < 4:
+            continue
+        trials.append({"h": h, "depth": depth, "leaf": leaf, "val": _metrics(val), "hold": _metrics(hold), "rows": rows,
+                       "Y": Y, "lab": lab})
+    if not trials:
+        return None
+    best = max(trials, key=lambda t: t["val"]["ic_t"])                             # chosen on validation only
+    Xnow = np.column_stack([feats[k].iloc[-1].values for k in names])
+    oknow = ~np.isnan(Xnow).any(axis=1)
+    pnow, model_name = _fit_predict(F[best["lab"]], best["Y"][best["lab"]], Xnow[oknow], best["depth"], best["leaf"])
+    yl = best["Y"][best["lab"]]
+    table_ = pd.DataFrame([{"Horizon": f"{t['h']}D", "Diepte": t["depth"], "Gekozen": "◀ gekozen" if t is best else "",
+                            "Validatie IC": t["val"]["ic"], "Validatie t": t["val"]["ic_t"], "Validatie n": t["val"]["n"],
+                            "Eindtoets IC": t["hold"]["ic"], "Eindtoets t": t["hold"]["ic_t"], "Eindtoets n": t["hold"]["n"],
+                            "Eindtoets top−bodem %": t["hold"]["spread"]} for t in trials])
+    return {"best": {k: best[k] for k in ("h", "depth", "leaf", "val", "hold")}, "trials": table_,
+            "curve": pd.Series(np.cumsum([r[2] for r in best["rows"]]) * 100, index=[dates[r[0]] for r in best["rows"]]),
+            "split_date": dates[split], "forecast": pd.Series(np.clip(pnow * 200, -100, 100), index=np.array(cols)[oknow]),
+            "relevance": pd.Series({k: float(np.corrcoef(F[..., j][best["lab"]], yl)[0, 1]) for j, k in enumerate(names)}),
+            "model": model_name, "examples": int(best["lab"].sum()), "first": dates[0], "test_from": dates[start], "n_feat": len(names)}
+
+
 # ════════════════════════════════════════════════════════════════════════════
 # 5. CHART BUILDERS
 # ════════════════════════════════════════════════════════════════════════════
@@ -740,7 +853,7 @@ def volume_profile_fig(P, t, days=60):
 # 6. STATE, SIDEBAR, DATA LOAD
 # ════════════════════════════════════════════════════════════════════════════
 ss = st.session_state
-VIEWS = ["SIGNALEN", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "METHODOLOGY"]
+VIEWS = ["SIGNALEN", "VOORSPELLING", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "METHODOLOGY", "HANDLEIDING"]
 if "pins" not in ss:
     qp = st.query_params.get("pins", "")
     ss.pins = [p for p in qp.split(",") if p] or ["SPY", "TLT", "GLD", "UUP", "HYG", "BTC-USD"]
@@ -943,6 +1056,8 @@ COLCFG = {
     "Flow % of $Vol": st.column_config.NumberColumn("Flow % $Vol", format="%+.1f%%"),
     "Gross $": st.column_config.NumberColumn("Gross $", format="compact"),
     "Trend": st.column_config.LineChartColumn("Trend", width="small"),
+    "Model": st.column_config.ProgressColumn("Model", min_value=-100, max_value=100, format="%+.0f",
+                                             help="Modelverwachting voor de komende 20 handelsdagen: +100 = verwacht bij de best presterende, −100 = bij de slechtste"),
     "Live": st.column_config.NumberColumn("Live", format="%+.0f", help="Flow score vandaag, op 15-minutenkoersen"),
     "5D": st.column_config.NumberColumn("5D", format="%+.0f", help="Flow score, laatste 5 handelsdagen"),
     "20D": st.column_config.NumberColumn("20D", format="%+.0f", help="Flow score, laatste 20 handelsdagen"),
@@ -956,7 +1071,7 @@ def styled(df):
     def c(v):
         return f"color:{GREEN}" if v > 5 else f"color:{RED}" if v < -5 else f"color:{AMBER}"
     cols = [x for x in ["Score", "Δ Score", "CMF raw", "RS vs Peers", "RS vs Risk-On", "Return %", "Net $ Flow", "Flow % of $Vol",
-                        "Vote", "Move %", "Z", "Live", "5D", "20D", "60D", "Totaal"] if x in df.columns]
+                        "Vote", "Move %", "Z", "Live", "5D", "20D", "60D", "Totaal", "Model"] if x in df.columns]
     sty = df.style.map(lambda v: c(v * 100) if isinstance(v, (int, float)) and np.isfinite(v) else "", subset=cols)
     if "Signaal" in df.columns:
         sty = sty.map(lambda v: f"color:{GREEN};font-weight:700" if "▲" in str(v) else f"color:{RED};font-weight:700" if "▼" in str(v) else f"color:{DIM}",
@@ -1088,6 +1203,87 @@ van {len(sig)} instrumenten</div>""", unsafe_allow_html=True)
 - **LIVE 1D** (rechtsboven): dezelfde berekening op 15-minutenkoersen van de laatste handelsdag, voor de andere schermen.
 - Dit zijn signalen, geen advies op maat. Het blok *Hoe betrouwbaar* laat zien of ze in dit universum historisch iets voorspelden.
 """)
+
+elif view == "VOORSPELLING":
+    sec("Zelflerend model · leert uit het verleden welke geldstroompatronen aan koersstijgingen voorafgingen")
+    with st.spinner("Model trainen, zichzelf afstellen en toetsen op historische data… (eerste keer ±1 minuut, daarna 1 uur onthouden)"):
+        ml = ml_forecast(P, stamp)
+    if ml is None:
+        st.info("Te weinig historie om een model te trainen en eerlijk te toetsen. In Live-modus wordt 5 jaar data gebruikt.")
+    else:
+        bst, hd, vl = ml["best"], ml["best"]["hold"], ml["best"]["val"]
+        H = bst["h"]
+        good = hd["ic_t"] > 2 and hd["spread"] > 0
+        weak = hd["ic"] > 0 and hd["spread"] > 0
+        v_txt, v_col = (("JA — AANTOONBAAR", GREEN) if good else ("ZWAK", AMBER) if weak else ("NEE", RED))
+        k_ = st.columns(5)
+        with k_[0]:
+            kpi("Voorspellend? · eindtoets", v_txt, f"{hd['n']} ongeziene perioden van {H}D", v_col)
+        with k_[1]:
+            kpi("Rangcorrelatie (IC)", f"{hd['ic']:+.3f}", f"t = {hd['ic_t']:+.1f} · overtuigend vanaf 2", col(hd["ic"] * 1000))
+        with k_[2]:
+            kpi("Top 20% min bodem 20%", f"{hd['spread']:+.2f}%", f"per {H} dagen · t = {hd['spread_t']:+.1f}", col(hd["spread"] * 20))
+        with k_[3]:
+            kpi("Trefkans", f"{hd['hit']:.0f}%", "top versloeg bodem", col(hd["hit"] - 50))
+        with k_[4]:
+            kpi("Geleerd van", f"{ml['examples']:,}".replace(",", "."), f"voorbeelden sinds {ml['first']:%m/%Y}")
+        st.markdown(f"<div class='note'>Model: {ml['model']} · {ml['n_feat']} kenmerken per instrument per dag · gekozen instelling: horizon {H} dagen, "
+                    f"boomdiepte {bst['depth']} · afgesteld op {ml['test_from']:%b %Y} – {ml['split_date']:%b %Y} (validatie-IC {vl['ic']:+.3f}, t = {vl['ic_t']:+.1f}) · "
+                    f"eindtoets vanaf {ml['split_date']:%b %Y} op data die bij het afstellen niet gebruikt is.</div>", unsafe_allow_html=True)
+        g1_, g2_, g3_ = st.columns([1.2, 1, 1])
+        with g1_:
+            cv = ml["curve"]
+            fig = go.Figure(go.Scatter(x=cv.index, y=cv.values, line=dict(color=CYAN, width=1.8), fill="tozeroy",
+                                       fillcolor="rgba(34,211,238,0.06)", hovertemplate="%{x|%b %Y}: %{y:+.1f}%<extra></extra>"))
+            fig.add_hline(y=0, line=dict(color=BORDER))
+            fig.add_vline(x=ml["split_date"], line=dict(color=AMBER, width=1, dash="dot"))
+            fig.add_annotation(x=ml["split_date"], y=1, yref="paper", text="eindtoets ►", showarrow=False, xanchor="left",
+                               font=dict(color=AMBER, size=10))
+            show(lay(fig, 320, title=dict(text="OPGETELD VERSCHIL TOP − BODEM (%, zonder kosten) · links afstellen, rechts eindtoets",
+                                          font=dict(size=11, color=DIM))))
+        with g2_:
+            fig = go.Figure(go.Bar(x=[f"Q{i}" for i in range(1, 6)], y=hd["quint"], marker_color=[col(v * 20) for v in hd["quint"]],
+                                   text=[f"{v:+.2f}%" for v in hd["quint"]], textposition="outside", cliponaxis=False))
+            show(lay(fig, 320, title=dict(text=f"EINDTOETS: RENDEMENT NA {H}D PER MODELGROEP · Q5 = hoogste verwachting", font=dict(size=11, color=DIM))))
+        with g3_:
+            show(bar_scores(ml["relevance"].sort_values().pipe(lambda x: pd.concat([x.head(6), x.tail(6)])) * 1000, 320,
+                            "WELKE KENMERKEN WOGEN MEE (samenhang ×1000)"))
+        fc = compute(P, stamp, 20, wt, tuple(ss.extra))[0]
+        fc = fc[fc.index.isin(ml["forecast"].index)][["Name", "Class", "Group", "Score", "Return %", "Trend"]].copy()
+        fc["Model"] = ml["forecast"].reindex(fc.index)
+        FCOLS = ["Name", "Group", "Model", "Score", "Return %", "Trend"]
+        a, b = st.columns(2)
+        with a:
+            sec(f"Hoogste modelverwachting · komende {H} handelsdagen · klik een rij voor details")
+            pick = table(fc.sort_values("Model", ascending=False).head(15), "ml_top", 560, FCOLS)
+            if pick:
+                goto(pick); st.rerun()
+        with b:
+            sec(f"Laagste modelverwachting · komende {H} handelsdagen · klik een rij voor details")
+            pick = table(fc.sort_values("Model").head(15), "ml_bot", 560, FCOLS)
+            if pick:
+                goto(pick); st.rerun()
+        sec("Zelf-afstelling · alle geteste instellingen")
+        st.dataframe(ml["trials"].style.format({"Validatie IC": "{:+.3f}", "Validatie t": "{:+.1f}", "Eindtoets IC": "{:+.3f}",
+                                                "Eindtoets t": "{:+.1f}", "Eindtoets top−bodem %": "{:+.2f}"})
+                     .map(lambda v: f"color:{GREEN}" if v > 2 else f"color:{RED}" if v < 0 else f"color:{AMBER}", subset=["Validatie t", "Eindtoets t"]),
+                     width="stretch", hide_index=True)
+        st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12px;line-height:1.8'><b>Zo lees je dit.</b> "
+                    "<b>Model</b> is een verwachte rangorde, geen koersdoel: +100 betekent dat het model dit instrument bij de best presterende van het universum "
+                    "verwacht, −100 bij de slechtste. <b>Score</b> is de gewone 20-daagse geldstroomscore ter vergelijking.<br>"
+                    "<b>Zelf-afstelling.</b> Het model probeert elke instelling in de tabel uit en kiest de beste op de <i>validatieperiode</i>. "
+                    "Het oordeel bovenaan komt uitsluitend uit de <i>eindtoets</i>: een latere periode die bij het kiezen niet is gebruikt. "
+                    "Dat is bewust. Een model dat mag blijven sleutelen tot dezelfde testdata er goed uitziet, vindt altijd iets dat overtuigend lijkt, "
+                    "ook in puur toeval, en faalt daarna met echt geld. Blijft het oordeel zwak, dan is dat de eerlijke uitkomst voor deze data.<br>"
+                    "Het model traint en stelt zichzelf opnieuw af bij elke verversing van de data (maximaal eens per uur).</div>", unsafe_allow_html=True)
+
+elif view == "HANDLEIDING":
+    doc = Path(__file__).with_name("HANDLEIDING.md")
+    if doc.exists():
+        txt = "\n".join(l for l in doc.read_text(encoding="utf-8").splitlines() if not l.startswith("!["))
+        st.markdown(txt)
+    else:
+        st.info("HANDLEIDING.md niet gevonden naast app.py.")
 
 elif view == "COMMAND CENTER":
     a, b = st.columns([1.7, 1])

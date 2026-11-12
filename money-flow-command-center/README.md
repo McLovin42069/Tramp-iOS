@@ -74,3 +74,11 @@ Not investment advice.
 - **Auto-refresh** toggle in the sidebar reloads every 5 minutes.
 
 To update an existing install, run `install-money-flow.sh` again.
+
+## Forecast model, manual and desktop app
+
+- **VOORSPELLING**: gradient-boosted model (scikit-learn) trained on 5 years of history. It tunes itself over
+  `ML_CONFIGS` on a validation period and is judged only on a later hold-out period (walk-forward, purged).
+- **HANDLEIDING.md / HANDLEIDING.pdf**: Dutch user manual, also shown inside the app.
+- **Desktop app**: the installer adds a "Money Flow" launcher (menu + desktop) that opens the app in its own
+  chromeless window via Brave/Chromium/Chrome `--app` mode and starts the server if needed.
