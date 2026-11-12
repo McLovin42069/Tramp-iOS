@@ -169,7 +169,7 @@ GREEN, RED, AMBER, CYAN = "#00ff9c", "#ff2d55", "#ffb020", "#22d3ee"
 SCALE = [[0, "#ff2d55"], [0.25, "#8a1f38"], [0.5, "#161d2c"], [0.75, "#0c8f5c"], [1, "#00ff9c"]]
 MONO = "'JetBrains Mono','SF Mono','Cascadia Code',Consolas,Menlo,monospace"
 
-st.set_page_config(page_title="Money Flow Command Center", page_icon="◈", layout="wide", initial_sidebar_state="expanded")
+st.set_page_config(page_title="Money Flow Command Center", page_icon="◈", layout="wide", initial_sidebar_state="auto")
 st.markdown(f"""<style>
 .stApp,[data-testid="stHeader"]{{background:{BG};}}
 [data-testid="stSidebar"]{{background:#080b13;border-right:1px solid {BORDER};}}
@@ -193,6 +193,14 @@ div[role="radiogroup"] label:has(input:checked){{border-color:{GREEN};background
 div[role="radiogroup"] label p{{font-family:{MONO};font-size:12px;letter-spacing:.06em;}}
 [data-testid="stMetricValue"]{{font-family:{MONO};}}
 .stButton button{{font-family:{MONO};font-size:12px;border:1px solid {BORDER};background:{PANEL};}}
+@media (max-width:640px){{
+ .block-container{{padding:3.2rem .6rem 2rem .6rem;}}
+ .hdr{{display:block;}} .hdr .t{{font-size:15px;letter-spacing:.08em;}} .hdr .s{{text-align:left;font-size:10px;}}
+ [data-testid="stHorizontalBlock"]:has(.kpi){{flex-wrap:wrap;gap:.4rem;}}
+ [data-testid="stColumn"]:has(.kpi):not(:has(.js-plotly-plot)){{min-width:calc(50% - .4rem)!important;width:calc(50% - .4rem)!important;flex:1 1 calc(50% - .4rem)!important;}}
+ .kpi .v{{font-size:18px;}}
+ div[role="radiogroup"] label{{padding:2px 6px;}}
+}}
 </style>""", unsafe_allow_html=True)
 
 
@@ -354,7 +362,7 @@ def fetch_fred():
     out = {}
     for sid in FRED_SERIES:
         try:
-            r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd=2022-01-01", timeout=8,
+            r = requests.get(f"https://fred.stlouisfed.org/graph/fredgraph.csv?id={sid}&cosd=2022-01-01", timeout=6,
                              headers={"User-Agent": "Mozilla/5.0"})
             r.raise_for_status()
             d = pd.read_csv(io.StringIO(r.text))
@@ -362,7 +370,8 @@ def fetch_fred():
             s.index = pd.to_datetime(d.iloc[:, 0])
             out[sid] = s.dropna()
         except Exception:
-            pass
+            if not out:   # first series failed => FRED unreachable; don't wait on the rest
+                break
     return out
 
 
@@ -1043,7 +1052,7 @@ elif view == "REGIME & LIQUIDITY":
     with c:
         sec("Regime history · mean of signal votes")
         if len(reg):
-            rh = pd.concat([h for h in reg["_hist"]], axis=1).mean(axis=1).tail(250)
+            rh = pd.concat([h for h in reg["_hist"]], axis=1, sort=True).mean(axis=1).tail(250)
             fig = go.Figure(go.Scatter(x=rh.index, y=rh, line=dict(color=CYAN, width=1.5), fill="tozeroy", fillcolor="rgba(34,211,238,0.08)"))
             fig.add_hline(y=0, line=dict(color=BORDER))
             lay(fig, 270)
