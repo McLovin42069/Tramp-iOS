@@ -769,9 +769,9 @@ def composite(fp: dict, w: dict) -> pd.DataFrame:
 
 
 @st.cache_data(ttl=900, show_spinner=False)
-def compute(_P: dict, stamp: str, n: int, wt: tuple, extra: tuple, bpd: int = 1):
+def compute(_P: dict, stamp: str, n: int, wt: tuple, extra: tuple, bpd: int = 1, full: bool = False):
     """stamp/extra are cache keys only (data identity + off-universe tickers)."""
-    if bpd == 1 and len(_P["Close"]) > 760:          # three years is ample for every lookback and for the 2-year checks; keeps memory flat
+    if bpd == 1 and not full and len(_P["Close"]) > 760:          # three years is ample for every lookback and for the 2-year checks; keeps memory flat
         _P = {k_: v_.tail(760) for k_, v_ in _P.items()}
     w = dict(zip(COMP_COLS, wt))
     cols = _P["Close"].columns
@@ -893,9 +893,11 @@ def horizon_test(_P: dict, stamp: str, wt: tuple, scope: str):
         cols = [c for c in cols if META.loc[c, "cls"] == scope]
     if len(cols) < 40:
         return None
+    scope_key = f"|hz|{scope}|{len(cols)}"
     groups, classes = META.loc[cols, "group"], META.loc[cols, "cls"]
     C = _P["Close"][cols]
-    ranks = {L: compute(_P, stamp, L, wt, ())[1][cols].rank(axis=1, pct=True) for L in HZ_LOOKBACKS}
+    _Ph = {k_: v_[cols] for k_, v_ in _P.items()}                      # only this scope, over the whole history
+    ranks = {L: compute(_Ph, stamp + scope_key, L, wt, (), 1, True)[1][cols].rank(axis=1, pct=True) for L in HZ_LOOKBACKS}
     rows = []
     for h in HZ_FORWARD:
         res = residual_returns(C.shift(-h - 1) / C.shift(-1) - 1, groups, classes)
