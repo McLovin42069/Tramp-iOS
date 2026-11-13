@@ -1,0 +1,125 @@
+[
+ {
+  "file": "lalloc_1",
+  "name": "SPY trend ensemble (price vs 6/8/10/12-month moving averages), monthly, cash in SHY",
+  "data": "long",
+  "variants": 70,
+  "discovery": {
+   "t": 4.146594641568017,
+   "sharpe": 0.8311680252096544,
+   "ann_return_pct": 10.193228537547402,
+   "alpha_t": 3.113039052076845,
+   "max_drawdown_pct": -19.030031749783525
+  },
+  "holdout": {
+   "days": 1978,
+   "ann_return_pct": 11.48593322468836,
+   "ann_vol_pct": 12.724497842472243,
+   "sharpe": 0.9026629865384737,
+   "t": 2.528939896677056,
+   "max_drawdown_pct": -24.75230071674227,
+   "positive_years": "7/8",
+   "alpha_ann_pct": 2.821415312309743,
+   "alpha_t": 0.8479434948821309,
+   "bench_ann_pct": 18.98496752087691,
+   "bench_sharpe": 1.000414932360571,
+   "bench_max_drawdown_pct": -33.71726378600282,
+   "by_year_pct": {
+    "2019": 15.01,
+    "2020": 20.66,
+    "2021": 28.73,
+    "2022": -20.42,
+    "2023": 11.66,
+    "2024": 24.89,
+    "2025": 11.76,
+    "2026": 4.3
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "full_t": 4.856240047234823,
+  "full_alpha_t": 3.2442860852609363
+ },
+ {
+  "file": "lcal_1",
+  "name": "TLT long only on the last 3 trading days of each month",
+  "data": "long",
+  "variants": 123,
+  "discovery": {
+   "t": 3.6756320436644443,
+   "sharpe": 0.9075008975412803,
+   "ann_return_pct": 4.4901733570185005,
+   "alpha_t": 3.1118081578406787,
+   "max_drawdown_pct": -12.533717151048474
+  },
+  "holdout": {
+   "days": 1978,
+   "ann_return_pct": 2.4973361556214315,
+   "ann_vol_pct": 5.142851319671099,
+   "sharpe": 0.48559369120185725,
+   "t": 1.3604604127663689,
+   "max_drawdown_pct": -8.969521258524493,
+   "positive_years": "7/8",
+   "alpha_ann_pct": 2.3807690541216475,
+   "alpha_t": 1.3634467493587639,
+   "bench_ann_pct": 1.1421921301600413,
+   "bench_sharpe": 0.07347925585928076,
+   "bench_max_drawdown_pct": -43.084549447202455,
+   "by_year_pct": {
+    "2019": 7.55,
+    "2020": 2.14,
+    "2021": 3.29,
+    "2022": 1.82,
+    "2023": 1.86,
+    "2024": 4.52,
+    "2025": 3.53,
+    "2026": -5.44
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "full_t": 3.778584937868994,
+  "full_alpha_t": 3.347684884780649
+ },
+ {
+  "file": "lcal_2",
+  "name": "TLT long last 3 trading days of month, short first 3 trading days",
+  "data": "long",
+  "variants": 123,
+  "discovery": {
+   "t": 4.251490136442518,
+   "sharpe": 1.049678278150769,
+   "ann_return_pct": 7.720902023461898,
+   "alpha_t": 4.3806537058554245,
+   "max_drawdown_pct": -15.06728236202035
+  },
+  "holdout": {
+   "days": 1978,
+   "ann_return_pct": 1.9477042669723963,
+   "ann_vol_pct": 8.30897106585151,
+   "sharpe": 0.23440980255390914,
+   "t": 0.6567327016742645,
+   "max_drawdown_pct": -18.67532202414074,
+   "positive_years": "5/8",
+   "alpha_ann_pct": 2.01763046065755,
+   "alpha_t": 0.684817042766348,
+   "bench_ann_pct": 1.1421921301600413,
+   "bench_sharpe": 0.07347925585928076,
+   "bench_max_drawdown_pct": -43.084549447202455,
+   "by_year_pct": {
+    "2019": 6.96,
+    "2020": 2.33,
+    "2021": 3.94,
+    "2022": 8.63,
+    "2023": -0.01,
+    "2024": -5.57,
+    "2025": 2.2,
+    "2026": -4.9
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "full_t": 3.753831997011846,
+  "full_alpha_t": 3.8813729832610795
+ }
+]
