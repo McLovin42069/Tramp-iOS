@@ -1,0 +1,478 @@
+{
+ "A_B_rangschikking": {
+  "boekwaarde / beurswaarde": {
+   "20d": {
+    "zoek": {
+     "n": 112,
+     "ic": -0.006,
+     "top_min_bodem_pct": -0.09,
+     "t": -0.32,
+     "alleen_goedkoopste_vijfde_pct": 0.03,
+     "t_top": 0.21
+    },
+    "toets": {
+     "n": 35,
+     "ic": 0.015,
+     "top_min_bodem_pct": 0.47,
+     "t": 0.94,
+     "alleen_goedkoopste_vijfde_pct": 0.26,
+     "t_top": 1.07
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 38,
+     "ic": -0.012,
+     "top_min_bodem_pct": 0.02,
+     "t": 0.03,
+     "alleen_goedkoopste_vijfde_pct": 0.05,
+     "t_top": 0.11
+    },
+    "toets": {
+     "n": 11,
+     "ic": 0.04,
+     "top_min_bodem_pct": 1.61,
+     "t": 0.76,
+     "alleen_goedkoopste_vijfde_pct": 1.17,
+     "t_top": 1.17
+    }
+   },
+   "250d": {
+    "zoek": {
+     "n": 9,
+     "ic": 0.008,
+     "top_min_bodem_pct": 0.38,
+     "t": 0.07,
+     "alleen_goedkoopste_vijfde_pct": -0.39,
+     "t_top": -0.13
+    },
+    "toets": {
+     "n": 2,
+     "ic": 0.099,
+     "top_min_bodem_pct": 28.19,
+     "t": 0.72,
+     "alleen_goedkoopste_vijfde_pct": 18.11,
+     "t_top": 0.83
+    }
+   }
+  },
+  "winst / beurswaarde": {
+   "20d": {
+    "zoek": {
+     "n": 112,
+     "ic": -0.014,
+     "top_min_bodem_pct": -0.29,
+     "t": -0.9,
+     "alleen_goedkoopste_vijfde_pct": -0.05,
+     "t_top": -0.28
+    },
+    "toets": {
+     "n": 35,
+     "ic": 0.001,
+     "top_min_bodem_pct": -0.64,
+     "t": -1.08,
+     "alleen_goedkoopste_vijfde_pct": -0.17,
+     "t_top": -0.73
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 38,
+     "ic": -0.015,
+     "top_min_bodem_pct": -0.74,
+     "t": -0.71,
+     "alleen_goedkoopste_vijfde_pct": -0.3,
+     "t_top": -0.55
+    },
+    "toets": {
+     "n": 11,
+     "ic": 0.031,
+     "top_min_bodem_pct": -1.35,
+     "t": -0.73,
+     "alleen_goedkoopste_vijfde_pct": -0.02,
+     "t_top": -0.04
+    }
+   },
+   "250d": {
+    "zoek": {
+     "n": 9,
+     "ic": -0.0,
+     "top_min_bodem_pct": -1.73,
+     "t": -0.43,
+     "alleen_goedkoopste_vijfde_pct": -0.44,
+     "t_top": -0.17
+    },
+    "toets": {
+     "n": 2,
+     "ic": 0.059,
+     "top_min_bodem_pct": -22.56,
+     "t": -14.06,
+     "alleen_goedkoopste_vijfde_pct": 0.14,
+     "t_top": 0.02
+    }
+   }
+  },
+  "vrije kasstroom / beurswaarde": {
+   "20d": {
+    "zoek": {
+     "n": 112,
+     "ic": -0.011,
+     "top_min_bodem_pct": -0.32,
+     "t": -1.06,
+     "alleen_goedkoopste_vijfde_pct": -0.04,
+     "t_top": -0.26
+    },
+    "toets": {
+     "n": 35,
+     "ic": -0.005,
+     "top_min_bodem_pct": -0.13,
+     "t": -0.25,
+     "alleen_goedkoopste_vijfde_pct": 0.21,
+     "t_top": 1.07
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 38,
+     "ic": -0.016,
+     "top_min_bodem_pct": -0.96,
+     "t": -1.07,
+     "alleen_goedkoopste_vijfde_pct": -0.17,
+     "t_top": -0.32
+    },
+    "toets": {
+     "n": 11,
+     "ic": 0.016,
+     "top_min_bodem_pct": 0.38,
+     "t": 0.27,
+     "alleen_goedkoopste_vijfde_pct": 0.83,
+     "t_top": 1.67
+    }
+   },
+   "250d": {
+    "zoek": {
+     "n": 9,
+     "ic": -0.03,
+     "top_min_bodem_pct": -5.9,
+     "t": -1.26,
+     "alleen_goedkoopste_vijfde_pct": -0.88,
+     "t_top": -0.31
+    },
+    "toets": {
+     "n": 2,
+     "ic": 0.113,
+     "top_min_bodem_pct": -10.82,
+     "t": -1.1,
+     "alleen_goedkoopste_vijfde_pct": 1.77,
+     "t_top": 0.59
+    }
+   }
+  },
+  "WAARDE samengesteld (drie maatstaven)": {
+   "20d": {
+    "zoek": {
+     "n": 112,
+     "ic": -0.015,
+     "top_min_bodem_pct": -0.14,
+     "t": -0.36,
+     "alleen_goedkoopste_vijfde_pct": -0.01,
+     "t_top": -0.03
+    },
+    "toets": {
+     "n": 35,
+     "ic": -0.01,
+     "top_min_bodem_pct": -0.02,
+     "t": -0.02,
+     "alleen_goedkoopste_vijfde_pct": 0.01,
+     "t_top": 0.02
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 38,
+     "ic": -0.021,
+     "top_min_bodem_pct": -0.6,
+     "t": -0.51,
+     "alleen_goedkoopste_vijfde_pct": -0.04,
+     "t_top": -0.07
+    },
+    "toets": {
+     "n": 11,
+     "ic": 0.015,
+     "top_min_bodem_pct": 0.49,
+     "t": 0.2,
+     "alleen_goedkoopste_vijfde_pct": 0.22,
+     "t_top": 0.23
+    }
+   },
+   "250d": {
+    "zoek": {
+     "n": 9,
+     "ic": -0.027,
+     "top_min_bodem_pct": -2.65,
+     "t": -0.45,
+     "alleen_goedkoopste_vijfde_pct": -0.53,
+     "t_top": -0.19
+    },
+    "toets": {
+     "n": 2,
+     "ic": 0.027,
+     "top_min_bodem_pct": 4.72,
+     "t": 0.2,
+     "alleen_goedkoopste_vijfde_pct": 4.91,
+     "t_top": 0.56
+    }
+   }
+  },
+  "GRAHAM: goedkoop + lage schuld": {
+   "20d": {
+    "zoek": {
+     "n": 112,
+     "ic": -0.005,
+     "top_min_bodem_pct": -0.15,
+     "t": -0.63,
+     "alleen_goedkoopste_vijfde_pct": 0.04,
+     "t_top": 0.32
+    },
+    "toets": {
+     "n": 35,
+     "ic": -0.012,
+     "top_min_bodem_pct": -0.43,
+     "t": -0.86,
+     "alleen_goedkoopste_vijfde_pct": -0.04,
+     "t_top": -0.15
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 38,
+     "ic": 0.002,
+     "top_min_bodem_pct": -0.05,
+     "t": -0.08,
+     "alleen_goedkoopste_vijfde_pct": 0.16,
+     "t_top": 0.4
+    },
+    "toets": {
+     "n": 11,
+     "ic": -0.009,
+     "top_min_bodem_pct": -0.91,
+     "t": -0.41,
+     "alleen_goedkoopste_vijfde_pct": 0.22,
+     "t_top": 0.22
+    }
+   },
+   "250d": {
+    "zoek": {
+     "n": 9,
+     "ic": 0.016,
+     "top_min_bodem_pct": -0.67,
+     "t": -0.22,
+     "alleen_goedkoopste_vijfde_pct": 0.68,
+     "t_top": 0.46
+    },
+    "toets": {
+     "n": 2,
+     "ic": -0.068,
+     "top_min_bodem_pct": -3.3,
+     "t": -0.14,
+     "alleen_goedkoopste_vijfde_pct": -0.99,
+     "t_top": -0.1
+    }
+   }
+  },
+  "BUFFETT: goedkoop + hoog rendement op eigen vermogen + lage schuld": {
+   "20d": {
+    "zoek": {
+     "n": 112,
+     "ic": -0.008,
+     "top_min_bodem_pct": -0.01,
+     "t": -0.05,
+     "alleen_goedkoopste_vijfde_pct": -0.04,
+     "t_top": -0.25
+    },
+    "toets": {
+     "n": 35,
+     "ic": -0.024,
+     "top_min_bodem_pct": -1.02,
+     "t": -1.41,
+     "alleen_goedkoopste_vijfde_pct": -0.16,
+     "t_top": -0.5
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 38,
+     "ic": -0.005,
+     "top_min_bodem_pct": 0.2,
+     "t": 0.21,
+     "alleen_goedkoopste_vijfde_pct": 0.06,
+     "t_top": 0.13
+    },
+    "toets": {
+     "n": 11,
+     "ic": -0.009,
+     "top_min_bodem_pct": -1.95,
+     "t": -1.0,
+     "alleen_goedkoopste_vijfde_pct": -0.02,
+     "t_top": -0.03
+    }
+   },
+   "250d": {
+    "zoek": {
+     "n": 9,
+     "ic": -0.0,
+     "top_min_bodem_pct": -1.4,
+     "t": -0.38,
+     "alleen_goedkoopste_vijfde_pct": -0.23,
+     "t_top": -0.13
+    },
+    "toets": {
+     "n": 2,
+     "ic": -0.038,
+     "top_min_bodem_pct": -10.87,
+     "t": -2.31,
+     "alleen_goedkoopste_vijfde_pct": 0.5,
+     "t_top": 0.09
+    }
+   }
+  }
+ },
+ "C_met_geldstroom": {
+  "goedkoop + positieve instroom": {
+   "20d": {
+    "zoek": {
+     "mandjes": 85,
+     "gem_pct": -0.89,
+     "t": -2.48
+    },
+    "toets": {
+     "mandjes": 35,
+     "gem_pct": -0.43,
+     "t": -0.67
+    }
+   },
+   "60d": {
+    "zoek": {
+     "mandjes": 28,
+     "gem_pct": -0.81,
+     "t": -1.04
+    },
+    "toets": {
+     "mandjes": 11,
+     "gem_pct": 1.04,
+     "t": 1.2
+    }
+   }
+  },
+  "goedkoop + uitstroom": {
+   "20d": {
+    "zoek": {
+     "mandjes": 87,
+     "gem_pct": 0.46,
+     "t": 1.3
+    },
+    "toets": {
+     "mandjes": 35,
+     "gem_pct": -0.73,
+     "t": -1.52
+    }
+   },
+   "60d": {
+    "zoek": {
+     "mandjes": 30,
+     "gem_pct": 0.71,
+     "t": 0.64
+    },
+    "toets": {
+     "mandjes": 11,
+     "gem_pct": 0.89,
+     "t": 0.89
+    }
+   }
+  },
+  "duur + positieve instroom": {
+   "20d": {
+    "zoek": {
+     "mandjes": 88,
+     "gem_pct": -0.21,
+     "t": -0.67
+    },
+    "toets": {
+     "mandjes": 35,
+     "gem_pct": 1.24,
+     "t": 2.29
+    }
+   },
+   "60d": {
+    "zoek": {
+     "mandjes": 30,
+     "gem_pct": 0.0,
+     "t": 0.0
+    },
+    "toets": {
+     "mandjes": 11,
+     "gem_pct": 1.66,
+     "t": 0.95
+    }
+   }
+  },
+  "goedkoop + instroom draait net bij (5D positief, 60D negatief)": {
+   "20d": {
+    "zoek": {
+     "mandjes": 82,
+     "gem_pct": -0.31,
+     "t": -1.04
+    },
+    "toets": {
+     "mandjes": 34,
+     "gem_pct": -0.03,
+     "t": -0.03
+    }
+   },
+   "60d": {
+    "zoek": {
+     "mandjes": 27,
+     "gem_pct": 0.77,
+     "t": 0.57
+    },
+    "toets": {
+     "mandjes": 11,
+     "gem_pct": -0.91,
+     "t": -0.72
+    }
+   }
+  },
+  "duur + instroom draait net bij": {
+   "20d": {
+    "zoek": {
+     "mandjes": 78,
+     "gem_pct": 0.06,
+     "t": 0.12
+    },
+    "toets": {
+     "mandjes": 34,
+     "gem_pct": 0.19,
+     "t": 0.19
+    }
+   },
+   "60d": {
+    "zoek": {
+     "mandjes": 27,
+     "gem_pct": 0.12,
+     "t": 0.08
+    },
+    "toets": {
+     "mandjes": 11,
+     "gem_pct": -0.76,
+     "t": -0.32
+    }
+   }
+  }
+ },
+ "meta": {
+  "aandelen": 341,
+  "van": "2015-01-20",
+  "tot": "2026-11-13",
+  "dekking_mediaan_per_dag": 229
+ }
+}
