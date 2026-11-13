@@ -58,8 +58,8 @@ Status: IN OBSERVATIE (minder dan 20 dagen in positie), LIVE BEVESTIGD (t boven 
 De analist werkt in drie stappen.
 
 1. **Gewichten volgen het bewijs.** Geldstroom, voorspelmodel en kwantscore wegen mee naar de mate waarin ze op ongeziene data werkten. Bovenaan staat hoe sterk dat bewijs is: GEEN, ZWAK of BEWEZEN. Zolang het niet BEWEZEN is, is een wereldindexfonds de eerlijke basiskeuze en is de selectie vooral een goed gespreide mand.
-2. **Kiezen wat je portefeuille beter maakt.** Kandidaten met weinig samenhang met je huidige posities krijgen voorrang; hooguit twee per sector of land.
-3. **Uitsluiten.** Geen voorstellen bij een rood marktalarm; extreem beweeglijke aandelen en "goedkoop met sterke instroom" vallen af.
+2. **Kiezen volgens jouw stijl.** Standaard *geconcentreerd*: de hoogste scores eerst en het meeste geld naar de hoogste score, zonder spreidingsregel. Kies je *gespreid*, dan krijgen kandidaten met weinig samenhang met je posities voorrang, met hooguit twee per sector of land. Onder "Waar zoeken" kun je ook alleen in Technologie & AI zoeken.
+3. **Uitsluiten.** Geen voorstellen bij een rood marktalarm; "goedkoop met sterke instroom" valt af, en in de gespreide stijl ook extreem beweeglijke aandelen.
 
 Per kandidaat staan de redenen en de aandachtspunten, zoals winstcijfers binnen een week. De analist leest geen nieuws en kent je vermogen niet. De eerste versie (70% geldstroom, 30% model) loopt op de achtergrond mee: onder ARCHIEF staan beide trackrecords, de oude met het voorvoegsel "OUD".
 

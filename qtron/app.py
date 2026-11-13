@@ -1722,7 +1722,7 @@ def styled(df):
 
 
 SCOPES = {"Alles": None, "Kern · ETF's, futures, FX": "core", "Aandelen VS": "US Stocks", "Aandelen Europa": "Europe Stocks",
-          "Aandelen Azië": "Asia Stocks"}
+          "Aandelen Azië": "Asia Stocks", "Technologie & AI (VS)": "grp:Technology|Communication"}
 
 
 def scope_filter(df, key):
@@ -1732,6 +1732,8 @@ def scope_filter(df, key):
     ch = SCOPES[st.radio("Toon", list(SCOPES), horizontal=True, key=key, label_visibility="collapsed")]
     if ch is None:
         return df
+    if str(ch).startswith("grp:"):
+        return df[df["Group"].isin(ch[4:].split("|")) & df["Class"].isin(STOCK_CLASSES)]
     return df[META["core"].reindex(df.index).fillna(False)] if ch == "core" else df[df["Class"] == ch]
 
 
@@ -1957,11 +1959,13 @@ def evidence_weights(ml, q):
     return w, ts, strength
 
 
-def analyst_select(scope, n_pick: int, ml, light: bool = False):
+def analyst_select(scope, n_pick: int, ml, light: bool = False, spread: bool = None):
     """The analyst. 1) Ingredients are weighted by their evidence. 2) Candidates are chosen for what they add to the
     portfolio: low correlation with what is already held and with each other, at most two per sector or country.
     3) Nothing is proposed while the market alarm is red; very volatile names and 'cheap with strong inflow' are skipped.
     light=True skips the look-ups that need the network (used for the daily memory log)."""
+    if spread is None:                              # the user's stored style; default is concentrated (highest score first)
+        spread = bool(mem_settings().get("an_spread", False))
     d = all_signals()
     d = d[d.index.isin(META.index)].copy()
     q = ss.get("_q")
@@ -1973,12 +1977,14 @@ def analyst_select(scope, n_pick: int, ml, light: bool = False):
     d["Kans"] = sum(w[k_] * parts[k_].fillna(0) for k_ in w)
     if scope == "core":
         d = d[META["core"].reindex(d.index).fillna(False)]
+    elif scope and str(scope).startswith("grp:"):
+        d = d[d["Group"].isin(str(scope)[4:].split("|")) & d["Class"].isin(STOCK_CLASSES)]
     elif scope:
         d = d[d["Class"] == scope]
     d = d[~d["Class"].isin(["Cash", "Futures & Vol", "Indices"]) & ~d["Group"].isin(["Spot Pairs", "Volatility"])]
     al_ = alarm_now(pat_key())
     red = bool(al_ and al_["level"] == 2)
-    cand = d[(d["Kans"] > 10) & (d["MFI raw"] < 90) & (d["Vol %"] < 60)].sort_values("Kans", ascending=False).head(max(30, 4 * n_pick))
+    cand = d[(d["Kans"] > 10) & (d["MFI raw"] < 90) & (d["Vol %"] < (60 if spread else 90))].sort_values("Kans", ascending=False).head(max(30, 4 * n_pick))
     held = [t_ for t_ in pf_load()["positions"] if t_ in P["Close"].columns]
     chosen, corr_, per_group = [], {}, {}
     if len(cand) and not red:
@@ -1990,12 +1996,12 @@ def analyst_select(scope, n_pick: int, ml, light: bool = False):
                 ref = [x_ for x_ in held + chosen if x_ != t_]
                 ac = float(Cm.loc[t_, ref].mean()) if ref else 0.0
                 ac = 0.0 if pd.isna(ac) else ac
-                sc_ = cand.at[t_, "Kans"] - 30 * max(ac, 0.0)          # a correlation of 1 with the book costs 30 points
+                sc_ = cand.at[t_, "Kans"] - (30 * max(ac, 0.0) if spread else 0.0)   # spread style: a correlation of 1 with the book costs 30 points
                 if sc_ > bs:
                     best, bs, bac = t_, sc_, ac
             pool.remove(best)
             g_ = cand.at[best, "Group"]
-            if best in held or per_group.get(g_, 0) >= 2:
+            if best in held or (spread and per_group.get(g_, 0) >= 2):
                 continue
             if not light and cand.at[best, "Totaal"] > 25 and is_cheap(best):
                 continue
@@ -2005,12 +2011,12 @@ def analyst_select(scope, n_pick: int, ml, light: bool = False):
     picks["Corr"] = pd.Series(corr_)
     wgt = pd.Series(dtype=float)
     if not picks.empty:
-        inv = 1 / picks["Vol %"].clip(lower=5)
-        wgt = (inv / inv.sum() * 100).clip(upper=35)
+        raw_w = 1 / picks["Vol %"].clip(lower=5) if spread else picks["Kans"].clip(lower=1)      # concentrated: the highest score gets the most money
+        wgt = (raw_w / raw_w.sum() * 100).clip(upper=35 if spread else 50)
         wgt = wgt / wgt.sum() * 100
     avoid = d[d["Kans"] < -20].sort_values("Kans").head(n_pick)
     if not light:
-        ss["_an_ev"] = {"w": w, "t": ts, "strength": strength, "red": red, "held": len(held)}
+        ss["_an_ev"] = {"w": w, "t": ts, "strength": strength, "red": red, "held": len(held), "spread": spread}
     return d, picks, wgt, avoid, strength == "BEWEZEN"
 
 
@@ -2106,20 +2112,27 @@ def analyst():
         scope = SCOPES[st.radio("Waar zoeken", list(SCOPES), horizontal=True, key="an_scope", label_visibility="collapsed")]
     with c2_:
         n_pick = st.select_slider("Aantal ideeën", [3, 5, 8, 10], value=5, key="an_n")
+    STYLES_ = ["Geconcentreerd · hoogste score eerst", "Gespreid · weinig samenhang"]
+    cur_sp = bool(mem_settings().get("an_spread", False))
+    style_ = st.radio("Stijl", STYLES_, index=int(cur_sp), horizontal=True, key="an_style", label_visibility="collapsed")
+    if (style_ == STYLES_[1]) != cur_sp:
+        mem_write("INSERT OR REPLACE INTO settings VALUES (?,?)", [("an_spread", json.dumps(style_ == STYLES_[1]))])
     try:
         ss["_q"] = get_quant()
     except Exception:
         ss["_q"] = None
-    d, picks, wgt, avoid, proven = analyst_select(scope, n_pick, ml)
-    ev_ = ss.get("_an_ev", {"w": {}, "t": {}, "strength": "GEEN", "red": False, "held": 0})
+    d, picks, wgt, avoid, proven = analyst_select(scope, n_pick, ml, spread=(style_ == STYLES_[1]))
+    ev_ = ss.get("_an_ev", {"w": {}, "t": {}, "strength": "GEEN", "red": False, "held": 0, "spread": False})
 
     klimaat = ("risk-on: beleggers zoeken risico op" if rs_ > 15 else "risk-off: beleggers mijden risico" if rs_ < -15 else "gemengd: geen duidelijke richting")
     sc_ = {"BEWEZEN": GREEN, "ZWAK": AMBER, "GEEN": RED}[ev_["strength"]]
     wtxt = " · ".join(f"{k_} {v_ * 100:.0f}% (t = {ev_['t'][k_]:+.1f})" for k_, v_ in ev_["w"].items())
     mtxt = (f"<br><b>Bewijs voor een voorsprong op de markt: <span style='color:{sc_}'>{ev_['strength']}</span>.</b> Gewichten volgen het bewijs op ongeziene data: {wtxt}. "
             + ("" if ev_["strength"] == "BEWEZEN" else "Zolang het bewijs ontbreekt is een wereldindexfonds de eerlijke basiskeuze; "
-               "de selectie hieronder is dan vooral een goed gespreide mand, geen voorspelling. ")
-            + f"Kandidaten zijn gekozen op wat ze toevoegen aan je {ev_['held']} huidige posities: weinig samenhang, hooguit twee per sector of land.")
+               "de selectie hieronder is dan een rangschikking volgens de beste beschikbare aanwijzingen, geen bewezen voorspelling. ")
+            + (f"Stijl gespreid: kandidaten zijn gekozen op wat ze toevoegen aan je {ev_['held']} huidige posities (weinig samenhang, hooguit twee per sector of land)."
+               if ev_.get("spread") else
+               "Stijl geconcentreerd: de hoogste scores eerst, het meeste geld naar de hoogste score, zonder spreidingsregel. Dat vergroot zowel de mogelijke winst als het mogelijke verlies."))
     st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12.5px;line-height:1.8'><b>Marktbeeld.</b> Klimaat: "
                 f"<span style='color:{col(rs_)}'>{klimaat}</span> (meter {rs_:+.0f}). {(d['Totaal'] > 10).mean() * 100:.0f}% van de bekeken instrumenten heeft "
                 f"netto instroom. {mtxt}</div>", unsafe_allow_html=True)
@@ -2150,7 +2163,8 @@ def analyst():
             if pd.notna(r_.get("Kwant")) and r_["Kwant"] > 20:
                 why.append(f"kwantscore bovengemiddeld ({r_['Kwant']:+.0f})")
             if pd.notna(r_.get("Corr")):
-                (why if r_["Corr"] < 0.35 else warn).append(f"{'weinig' if r_['Corr'] < 0.35 else 'veel'} samenhang met je portefeuille en de andere kandidaten (correlatie {r_['Corr']:.2f})")
+                if ev_.get("spread") or r_["Corr"] >= 0.6:
+                    (why if r_["Corr"] < 0.35 else warn).append(f"{'weinig' if r_['Corr'] < 0.35 else 'veel'} samenhang met je portefeuille en de andere kandidaten (correlatie {r_['Corr']:.2f})")
             if r_["Fase"] == "versnelt":
                 why.append("de instroom versnelt")
             if r_["RVOL"] > 1.25:
