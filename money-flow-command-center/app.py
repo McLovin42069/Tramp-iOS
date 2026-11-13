@@ -748,9 +748,64 @@ def backtest(_score: pd.DataFrame, _close: pd.DataFrame, stamp: str, horizons: t
     return pd.DataFrame(rows), verdict
 
 
+def residual_returns(fwd: pd.DataFrame, groups: pd.Series, classes: pd.Series) -> pd.DataFrame:
+    """Return of each instrument minus the median of its own sector/region on the same date. This strips out
+    market, sector and (mostly) currency moves, which no instrument-level flow signal can predict.
+    Groups with fewer than 3 members fall back to their asset class."""
+    g, c = groups.reindex(fwd.columns), classes.reindex(fwd.columns)
+    small = (g.map(g.value_counts()) < 3).values
+    gm = fwd.T.groupby(g.values).transform("median").T.values
+    cm = fwd.T.groupby(c.values).transform("median").T.values
+    return fwd - np.where(small[None, :], cm, gm)
+
+
+HZ_LOOKBACKS, HZ_FORWARD = (5, 20, 60, 120), (1, 5, 20, 60, 120)
+# Hypotheses fixed BEFORE looking at the results: (score lookback, forward horizon, expected sign)
+HZ_HYPOTHESES = {(5, 5): -1, (60, 60): +1, (120, 120): +1}
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def horizon_test(_P: dict, stamp: str, wt: tuple, scope: str):
+    """Does 'follow the money' work, and at which horizon? For every (score lookback, forward horizon) pair:
+    on non-overlapping dates, compare the sector/region-neutral forward return of the 20% highest flow scores
+    with the 20% lowest. Entry is at the close of the day AFTER the signal."""
+    cols = [c for c in _P["Close"].columns if c in META.index]
+    if scope == "core":
+        cols = [c for c in cols if META.loc[c, "core"]]
+    elif scope:
+        cols = [c for c in cols if META.loc[c, "cls"] == scope]
+    if len(cols) < 40:
+        return None
+    groups, classes = META.loc[cols, "group"], META.loc[cols, "cls"]
+    C = _P["Close"][cols]
+    ranks = {L: compute(_P, stamp, L, wt, ())[1][cols].rank(axis=1, pct=True) for L in HZ_LOOKBACKS}
+    rows = []
+    for h in HZ_FORWARD:
+        res = residual_returns(C.shift(-h - 1) / C.shift(-1) - 1, groups, classes)
+        # Non-overlapping periods can start on any day. For long horizons the answer should not depend on that
+        # arbitrary choice, so the test is repeated for 4 different start days and the results are AVERAGED
+        # (the number of periods is not multiplied: they are the same data seen from shifted grids).
+        offsets = [0] if h < 20 else [0, h // 4, h // 2, 3 * h // 4]
+        for L in HZ_LOOKBACKS:
+            runs = []
+            for off in offsets:
+                pos = list(range(260 + off, len(C) - h - 1, h))
+                rr, sr = res.iloc[pos], ranks[L].iloc[pos]
+                ok = sr.notna() & rr.notna()
+                sp = (rr.where((sr > 0.8) & ok).mean(axis=1) - rr.where((sr <= 0.2) & ok).mean(axis=1)).dropna()
+                if len(sp) >= 8 and sp.std() > 0:
+                    runs.append((sp.mean() * 100, sp.mean() / sp.std(ddof=1) * np.sqrt(len(sp)), len(sp), (sp > 0).mean() * 100))
+            if runs:
+                a_ = np.array(runs)
+                rows.append({"L": L, "h": h, "spread": float(a_[:, 0].mean()), "t": float(a_[:, 1].mean()), "n": int(a_[:, 2].min()),
+                             "hit": float(a_[:, 3].mean()), "t_min": float(a_[:, 1].min()), "t_max": float(a_[:, 1].max())})
+    return pd.DataFrame(rows) if rows else None
+
+
 # ── machine-learning forecast with honest self-tuning ───────────────────────
 # Candidate settings the model tries on itself: (forecast horizon in days, tree depth, min samples per leaf)
-ML_CONFIGS = [(h, d, leaf) for h in (10, 20, 40) for d, leaf in ((2, 400), (3, 200))]
+ML_CONFIGS = [(h, d, leaf) for h in (5, 20, 60) for d, leaf in ((2, 400), (3, 200))]
+ML_MIN_PERIODS = 12    # a verdict of 'proven' needs at least this many unseen, non-overlapping test periods
 
 
 def _fit_predict(Xtr, ytr, Xte, depth=3, leaf=200, cap=120_000):
@@ -811,7 +866,8 @@ def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
     Inputs   : per instrument - 6 flow components on 5D/20D/60D, momentum on 5/20/60/120/250D, distance from the
                250-day high, volatility, asset class. Market-wide - cross-asset regime ratios, VIX, and (when
                reachable) FRED credit/curve/liquidity and CFTC positioning, each lagged by its publication delay.
-    Target   : cross-sectional rank of the return over the NEXT h trading days.
+    Target   : rank of the return over the NEXT h trading days RELATIVE TO the instrument's own sector/region,
+               scaled by its volatility (so the model is not asked to predict the market, sector or currency).
     Tuning   : every setting in ML_CONFIGS is walked forward through history; the one that ranks best on the
                VALIDATION period (first 65% of the test span) is selected.
     Verdict  : measured only on the HOLD-OUT period (last 35%), which played no part in choosing the setting.
@@ -822,7 +878,7 @@ def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
     cols = [c for c in P["Close"].columns if c in META.index]
     P_ = {k: v[cols] for k, v in P.items()}
     C = P_["Close"]
-    key = f"{C.index[-1].date()}|{len(cols)}|{len(C)}|{','.join(macro.columns)}|v3"
+    key = f"{C.index[-1].date()}|{len(cols)}|{len(C)}|{','.join(macro.columns)}|v5"
     f_ = CACHE_DIR / "model.pkl"
     try:
         saved = pd.read_pickle(f_)
@@ -863,8 +919,9 @@ def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
     for h, depth, leaf in ML_CONFIGS:
         # Enter at the NEXT day's close and hold h days. Skipping a day matters: Asian and European markets close
         # before the US, so same-day US information must not be allowed to "predict" their move.
-        fwd = C.shift(-h - 1) / C.shift(-1) - 1
-        Y, R = (fwd.rank(axis=1, pct=True) - 0.5).reindex(dates).values, fwd.reindex(dates).values
+        # Target = return relative to the instrument's own sector/region, scaled by its volatility, then ranked.
+        fwd = residual_returns(C.shift(-h - 1) / C.shift(-1) - 1, groups, classes)
+        Y, R = ((fwd / (vol * np.sqrt(h))).rank(axis=1, pct=True) - 0.5).reindex(dates).values, fwd.reindex(dates).values
         rows, lab = _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start)
         val, hold = [r for r in rows if r[0] < split], [r for r in rows if r[0] >= split]
         if len(val) < 6 or len(hold) < 4:
@@ -905,7 +962,7 @@ def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
                             "Eindtoets top−bodem %": t["hold"]["spread"]} for t in trials])
     result = {"best": {k: best[k] for k in ("h", "depth", "leaf", "val", "hold")}, "trials": table_,
               "curve": pd.Series(np.cumsum([r[2] for r in best["rows"]]) * 100, index=[dates[r[0]] for r in best["rows"]]),
-              "split_date": dates[split], "forecast": pd.Series(np.clip(pnow * 200, -100, 100), index=np.array(cols)[oknow]),
+              "split_date": dates[split], "forecast": (pd.Series(pnow, index=np.array(cols)[oknow]).rank(pct=True) - 0.5) * 200,   # percentile of today's forecast, -100..+100
               "relevance": pd.Series({k: _corr(j_) for j_, k in enumerate(names)}),
               "model": model_name, "examples": int(best["lab"].sum()), "first": dates[0], "test_from": dates[start],
               "n_feat": len(names), "n_inst": len(cols), "macro": list(macro.columns), "trained": last}
@@ -1464,7 +1521,7 @@ def analyst():
     S_ = {k_: v_[v_.index.isin(META.index)] for k_, v_ in S_.items()}
     d = signal_frame(S_["5D"], S_["20D"], S_["60D"]).join(S_["20D"][["CMF raw", "MFI raw", "RVOL", "RS vs Peers", "Last"]])
     ml = get_ml()
-    proven = bool(ml and ml["best"]["hold"]["ic_t"] > 2 and ml["best"]["hold"]["spread"] > 0)
+    proven = bool(ml and ml["best"]["hold"]["ic_t"] > 2 and ml["best"]["hold"]["spread"] > 0 and ml["best"]["hold"]["n"] >= ML_MIN_PERIODS)
     d["Model"] = ml["forecast"].reindex(d.index) if ml else np.nan
     d["Vol %"] = P["Close"][d.index].pct_change(fill_method=None).tail(60).std() * np.sqrt(252) * 100
     w_m = 0.6 if proven else 0.3                                   # lean on the model only when it has earned it
@@ -1688,16 +1745,17 @@ elif view == "VOORSPELLING":
     else:
         bst, hd, vl = ml["best"], ml["best"]["hold"], ml["best"]["val"]
         H = bst["h"]
-        good = hd["ic_t"] > 2 and hd["spread"] > 0
+        sig_ = hd["ic_t"] > 2 and hd["spread"] > 0
+        good = sig_ and hd["n"] >= ML_MIN_PERIODS
         weak = hd["ic"] > 0 and hd["spread"] > 0
-        v_txt, v_col = (("JA — AANTOONBAAR", GREEN) if good else ("ZWAK", AMBER) if weak else ("NEE", RED))
+        v_txt, v_col = (("JA — AANTOONBAAR", GREEN) if good else ("VEELBELOVEND", CYAN) if sig_ else ("ZWAK", AMBER) if weak else ("NEE", RED))
         k_ = st.columns(5)
         with k_[0]:
-            kpi("Voorspellend? · eindtoets", v_txt, f"{hd['n']} ongeziene perioden van {H}D", v_col)
+            kpi("Voorspellend? · eindtoets", v_txt, f"{hd['n']} ongeziene perioden van {H}D" + ("" if good or not sig_ else f" · {ML_MIN_PERIODS} nodig"), v_col)
         with k_[1]:
             kpi("Rangcorrelatie (IC)", f"{hd['ic']:+.3f}", f"t = {hd['ic_t']:+.1f} · overtuigend vanaf 2", col(hd["ic"] * 1000))
         with k_[2]:
-            kpi("Top 20% min bodem 20%", f"{hd['spread']:+.2f}%", f"per {H} dagen · t = {hd['spread_t']:+.1f}", col(hd["spread"] * 20))
+            kpi("Top 20% min bodem 20%", f"{hd['spread']:+.2f}%", f"per {H}D t.o.v. sector/regio · t = {hd['spread_t']:+.1f}", col(hd["spread"] * 20))
         with k_[3]:
             kpi("Trefkans", f"{hd['hit']:.0f}%", "top versloeg bodem", col(hd["hit"] - 50))
         with k_[4]:
@@ -1740,14 +1798,75 @@ elif view == "VOORSPELLING":
             pick = table(fc.sort_values("Model").head(15), "ml_bot", 560, FCOLS)
             if pick:
                 goto(pick); st.rerun()
+        sec("Termijntoets · werkt ‘volg het geld’, en op welke termijn?")
+        hz_scope = SCOPES[st.radio("Universum termijntoets", list(SCOPES), horizontal=True, key="hz_scope", label_visibility="collapsed")]
+        with st.spinner("Termijntoets berekenen…"):
+            hz = horizon_test(P, stamp, wt, hz_scope)
+        if hz is None:
+            st.info("Te weinig instrumenten of historie voor deze selectie.")
+        else:
+            lab_h = {1: "1 dag vooruit", 5: "5 dagen", 20: "20 dagen", 60: "60 dagen", 120: "120 dagen"}
+            Z = hz.pivot(index="L", columns="h", values="t").reindex(index=HZ_LOOKBACKS, columns=HZ_FORWARD)
+            SPm = hz.pivot(index="L", columns="h", values="spread").reindex(index=HZ_LOOKBACKS, columns=HZ_FORWARD)
+            txt = [[("" if pd.isna(Z.loc[L, h]) else f"{'★ ' if (L, h) in HZ_HYPOTHESES else ''}{SPm.loc[L, h]:+.2f}%<br>t = {Z.loc[L, h]:+.1f}")
+                    for h in HZ_FORWARD] for L in HZ_LOOKBACKS]
+            h1_, h2_ = st.columns([1.25, 1])
+            with h1_:
+                fig = go.Figure(go.Heatmap(z=Z.values, x=[lab_h[h] for h in HZ_FORWARD], y=[f"Score over {L}D" for L in HZ_LOOKBACKS],
+                                           colorscale=SCALE, zmin=-4, zmax=4, xgap=3, ygap=3, text=txt, texttemplate="%{text}", textfont=dict(size=12),
+                                           colorbar=dict(title="t", thickness=10, tickfont=dict(size=9)), hoverinfo="skip"))
+                lay(fig, 330, title=dict(text="HOOGSTE 20% SCORES MIN LAAGSTE 20% · rendement t.o.v. eigen sector/regio · ★ = vooraf vastgelegde hypothese",
+                                         font=dict(size=11, color=DIM)))
+                fig.update_yaxes(autorange="reversed")
+                show(fig)
+            with h2_:
+                names_ = {(5, 5): "Korte termijn tegendraads: hoge 5D-score → láger rendement in de 5 dagen erna",
+                          (60, 60): "Lange termijn meegaand: hoge 60D-score → hóger rendement in de 60 dagen erna",
+                          (120, 120): "Zeer lange termijn meegaand: hoge 120D-score → hóger rendement in de 120 dagen erna"}
+                lines = []
+                for (L, h), sgn in HZ_HYPOTHESES.items():
+                    r_ = hz[(hz["L"] == L) & (hz["h"] == h)]
+                    if r_.empty:
+                        lines.append(f"<b>{names_[(L, h)]}</b><br><span style='color:{DIM}'>te weinig meetmomenten</span>")
+                        continue
+                    r_ = r_.iloc[0]
+                    okk = r_["t"] * sgn > 2.4
+                    part = r_["t"] * sgn > 1
+                    verdict_ = (f"<b style='color:{GREEN}'>ONDERSTEUND</b>" if okk else f"<b style='color:{AMBER}'>RICHTING KLOPT, NIET OVERTUIGEND</b>" if part
+                                else f"<b style='color:{RED}'>NIET ONDERSTEUND</b>")
+                    lines.append(f"<b>{names_[(L, h)]}</b><br>gemeten verschil {r_['spread']:+.2f}% · t = {r_['t']:+.1f} (per startmoment {r_['t_min']:+.1f} tot {r_['t_max']:+.1f}) · {int(r_['n'])} perioden · {verdict_}")
+                # What drives it: the volume-based flow components, or plain price strength?
+                w_flow = tuple(w if c in ("CMF", "MFI", "Flow Momentum") else 0 for c, w in zip(COMP_COLS, DEFAULT_WEIGHTS.values()))
+                w_price = tuple(w if c in ("RS vs Peers", "RS vs Risk-On") else 0 for c, w in zip(COMP_COLS, DEFAULT_WEIGHTS.values()))
+                hz_f, hz_p = horizon_test(P, stamp, w_flow, hz_scope), horizon_test(P, stamp, w_price, hz_scope)
+                dec = []
+                for (L, h) in HZ_HYPOTHESES:
+                    cell = lambda d_: d_[(d_["L"] == L) & (d_["h"] == h)].iloc[0] if d_ is not None and len(d_[(d_["L"] == L) & (d_["h"] == h)]) else None
+                    f_, p_ = cell(hz_f), cell(hz_p)
+                    if f_ is not None and p_ is not None:
+                        dec.append(f"{L}D → {h}D: alleen geldstroom {f_['spread']:+.2f}% (t = {f_['t']:+.1f}) · alleen koerssterkte {p_['spread']:+.2f}% (t = {p_['t']:+.1f})")
+                lines.append("<b>Wat drijft het?</b> Dezelfde toets met alleen de volumegebaseerde geldstroomdelen (CMF, MFI, flow momentum) "
+                             "en met alleen de koerssterkte (relatieve sterkte):<br>" + "<br>".join(dec))
+                extra_ = hz[(hz["t"].abs() > 3) & ~hz.apply(lambda r: (r["L"], r["h"]) in HZ_HYPOTHESES, axis=1)]
+                more = ("<br><br><b>Opvallend buiten de hypothesen</b> (|t| boven 3): " + ", ".join(
+                    f"score {int(r['L'])}D → {int(r['h'])}D vooruit ({r['spread']:+.2f}%, t = {r['t']:+.1f})" for _, r in extra_.iterrows())
+                        if len(extra_) else "<br><br>Buiten de drie hypothesen haalt geen enkele cel de strengere grens van |t| boven 3.")
+                st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12px;line-height:1.75'>" + "<br><br>".join(lines) + more +
+                            f"<br><br><span style='color:{DIM}'>Groen = hoge scores deden het daarna beter, rood = slechter. Drie hypothesen zijn vooraf "
+                            "vastgelegd en gelden als ondersteund vanaf |t| 2,4. De overige 17 cellen zijn verkennend; omdat er zoveel zijn, "
+                            "telt daar pas |t| boven 3. Bij horizonten vanaf 20 dagen is de toets voor 4 startmomenten herhaald en gemiddeld. "
+                            "Instap op de slotkoers van de dag na het signaal, zonder kosten.</span></div>", unsafe_allow_html=True)
+
         sec("Zelf-afstelling · alle geteste instellingen")
         st.dataframe(ml["trials"].style.format({"Validatie IC": "{:+.3f}", "Validatie t": "{:+.1f}", "Eindtoets IC": "{:+.3f}",
                                                 "Eindtoets t": "{:+.1f}", "Eindtoets top−bodem %": "{:+.2f}"})
                      .map(lambda v: f"color:{GREEN}" if v > 2 else f"color:{RED}" if v < 0 else f"color:{AMBER}", subset=["Validatie t", "Eindtoets t"]),
                      width="stretch", hide_index=True)
         st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12px;line-height:1.8'><b>Zo lees je dit.</b> "
-                    "<b>Model</b> is een verwachte rangorde, geen koersdoel: +100 betekent dat het model dit instrument bij de best presterende van het universum "
-                    "verwacht, −100 bij de slechtste. <b>Score</b> is de gewone 20-daagse geldstroomscore ter vergelijking.<br>"
+                    "<b>Model</b> is een verwachte rangorde, geen koersdoel: +100 is de hoogste verwachting van het hele universum, −100 de laagste, "
+                    "0 precies het midden. <b>Score</b> is de gewone 20-daagse geldstroomscore ter vergelijking.<br>"
+                    "<b>Doel.</b> Het model voorspelt het rendement <i>ten opzichte van de eigen sector of regio</i>, gecorrigeerd voor beweeglijkheid. "
+                    "Het hoeft dus niet te raden of de markt, de sector of de valuta stijgt.<br>"
                     "<b>Zelf-afstelling.</b> Het model probeert elke instelling in de tabel uit en kiest de beste op de <i>validatieperiode</i>. "
                     "Het oordeel bovenaan komt uitsluitend uit de <i>eindtoets</i>: een latere periode die bij het kiezen niet is gebruikt. "
                     "Dat is bewust. Een model dat mag blijven sleutelen tot dezelfde testdata er goed uitziet, vindt altijd iets dat overtuigend lijkt, "

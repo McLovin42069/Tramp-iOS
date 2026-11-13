@@ -108,12 +108,21 @@ Klik op een rij om de detailpagina van dat instrument te openen.
 
 ![Voorspelling](docs/voorspelling.png)
 
-Een model dat uit tien jaar historie van alle instrumenten leert welke patronen aan koersstijgingen voorafgingen, en daarmee een verwachting voor de komende weken geeft. Het gebruikt 35 kenmerken: geldstromen op drie termijnen, koersmomentum, beweeglijkheid, en marktbrede gegevens zoals de verhouding tussen aandelen en obligaties, de VIX en de posities van speculanten op de termijnmarkten.
+Een model dat uit tien jaar historie van alle instrumenten leert welke patronen aan koersstijgingen voorafgingen, en daarmee een verwachting voor de komende weken geeft. Het voorspelt het rendement *ten opzichte van de eigen sector of regio*, gecorrigeerd voor beweeglijkheid: het hoeft dus niet te raden of de markt of de valuta stijgt. Het gebruikt 35 kenmerken: geldstromen op drie termijnen, koersmomentum, beweeglijkheid, en marktbrede gegevens zoals de verhouding tussen aandelen en obligaties, de VIX en de posities van speculanten op de termijnmarkten.
 
-- **Voorspellend? · eindtoets** — de belangrijkste tegel: *JA — AANTOONBAAR*, *ZWAK* of *NEE*. Hij zegt of het model op data die het nooit gezien heeft beter dan toeval rangschikte.
+- **Voorspellend? · eindtoets** — de belangrijkste tegel. Hij zegt of het model op data die het nooit gezien heeft beter dan toeval rangschikte:
+
+| Uitslag | Betekenis |
+|---|---|
+| JA — AANTOONBAAR | Statistisch overtuigend (t boven 2) over minstens 12 ongeziene perioden. |
+| VEELBELOVEND | Statistisch overtuigend, maar over minder dan 12 perioden. Te weinig om op te bouwen. |
+| ZWAK | De richting klopt, maar het verschil is niet van toeval te onderscheiden. |
+| NEE | Geen verband, of het verkeerde teken. |
+
 - **Rangcorrelatie (IC)** en **t** — hoe goed de voorspelde volgorde overeenkwam met de werkelijke. Een t boven 2 geldt als statistisch overtuigend.
 - **Top 20% min bodem 20%** — hoeveel beter de hoogst gerangschikte instrumenten het deden dan de laagste.
-- **Hoogste / laagste modelverwachting** — de actuele voorspelling. *Model* +100 betekent: verwacht bij de best presterende; −100: bij de slechtste. Het is een rangorde, geen koersdoel.
+- **Hoogste / laagste modelverwachting** — de actuele voorspelling. *Model* +100 is de hoogste verwachting van het hele universum, −100 de laagste. Het is een rangorde, geen koersdoel.
+- **Termijntoets** — toetst het idee "volg het geld" rechtstreeks, zonder model. Elke cel vergelijkt de 20% hoogste scores met de 20% laagste: links de periode waarover de score gemeten is, onder de periode erna. Groen betekent dat hoge scores het daarna beter deden, rood slechter. Drie hypothesen (★) zijn vooraf vastgelegd; rechts staat per hypothese het oordeel, en of het effect uit de geldstroomdelen of uit gewone koerssterkte komt.
 - **Zelf-afstelling** — alle instellingen die het model op zichzelf heeft uitgeprobeerd, met de gekozen instelling gemarkeerd.
 
 Het model traint en stelt zichzelf opnieuw af zodra er een nieuwe handelsdag aan data is. Dat duurt 1 tot 3 minuten; daarna staat het resultaat op schijf en opent het scherm direct.

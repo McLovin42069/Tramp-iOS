@@ -91,3 +91,10 @@ To update an existing install, run `install-money-flow.sh` again.
   Forward returns are measured from the next day's close to avoid same-day timing leakage across time zones.
 - **ANALIST** popup: rule-based shortlist with reasons, cautions and inverse-volatility weights.
 - **PORTEFEUILLE**: paper trading with FX conversion, fees, positions, P&L and equity history (`cache/portfolio.json`).
+
+## Horizon test and sector-neutral target
+
+- **Termijntoets** (in VOORSPELLING): top-20% minus bottom-20% flow score, sector/region-neutral forward returns, for every
+  lookback x horizon pair; three hypotheses are fixed in `HZ_HYPOTHESES`; long horizons are averaged over 4 start days.
+- The model target is now the volatility-scaled return relative to the instrument's own sector/region.
+- A "proven" verdict requires t > 2 on at least `ML_MIN_PERIODS` unseen periods.
