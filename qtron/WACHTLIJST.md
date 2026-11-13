@@ -17,6 +17,7 @@
 - Analist: aandachtspunten voor winstcijfers, goedkoop plus sterke instroom, en plaats in de Aziatische patronen.
 - Meldingen op de telefoon via ntfy (standaard uit).
 - Handleiding.
+- Analist omgebouwd: gewichten volgen het bewijs, keuze op spreiding tegenover de portefeuille, geen voorstellen bij rood alarm. De oude regel loopt mee in het trackrecord (voorvoegsel OUD).
 
 ## Getoetst en afgewezen (niet opnieuw proberen zonder nieuwe data)
 

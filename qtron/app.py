@@ -1940,8 +1940,82 @@ def pf_advice(pf: dict, pos_df: pd.DataFrame) -> pd.DataFrame:
     return out
 
 
-def analyst_select(scope, n_pick: int, ml):
-    """Shared selection logic of the analyst (used by the popup and by the daily memory log)."""
+EVIDENCE_FLOW_T = 0.0      # research round 5: the flow score on its own showed no edge on unseen data
+
+
+def evidence_weights(ml, q):
+    """Weight of each ingredient follows its evidence on unseen data (t-statistic, floored at zero, capped at 3).
+    Every ingredient keeps a small base weight so that a ranking still exists when nothing is proven."""
+    ts = {"Geldstroom": EVIDENCE_FLOW_T}
+    if ml:
+        ts["Model"] = float(min(ml["best"]["hold"]["ic_t"], (ml["best"].get("all") or ml["best"]["hold"])["ic_t"]))
+    if q:
+        ts["Kwant"] = float(q["prim"]["t"])
+    raw = {k_: 0.15 + max(0.0, min(v_, 3.0)) / 3 for k_, v_ in ts.items()}
+    w = {k_: v_ / sum(raw.values()) for k_, v_ in raw.items()}
+    strength = "BEWEZEN" if (ml_verdict(ml)[1] or bool(q and q["proven"])) else "ZWAK" if max(ts.values()) > 1 else "GEEN"
+    return w, ts, strength
+
+
+def analyst_select(scope, n_pick: int, ml, light: bool = False):
+    """The analyst. 1) Ingredients are weighted by their evidence. 2) Candidates are chosen for what they add to the
+    portfolio: low correlation with what is already held and with each other, at most two per sector or country.
+    3) Nothing is proposed while the market alarm is red; very volatile names and 'cheap with strong inflow' are skipped.
+    light=True skips the look-ups that need the network (used for the daily memory log)."""
+    d = all_signals()
+    d = d[d.index.isin(META.index)].copy()
+    q = ss.get("_q")
+    w, ts, strength = evidence_weights(ml, q)
+    d["Model"] = ml["forecast"].reindex(d.index) if ml else np.nan
+    d["Kwant"] = q["now"].reindex(d.index) if q else np.nan
+    d["Vol %"] = P["Close"][d.index].pct_change(fill_method=None).tail(60).std() * np.sqrt(252) * 100
+    parts = {"Geldstroom": d["Totaal"], "Model": d["Model"], "Kwant": d["Kwant"]}
+    d["Kans"] = sum(w[k_] * parts[k_].fillna(0) for k_ in w)
+    if scope == "core":
+        d = d[META["core"].reindex(d.index).fillna(False)]
+    elif scope:
+        d = d[d["Class"] == scope]
+    d = d[~d["Class"].isin(["Cash", "Futures & Vol", "Indices"]) & ~d["Group"].isin(["Spot Pairs", "Volatility"])]
+    al_ = alarm_now(pat_key())
+    red = bool(al_ and al_["level"] == 2)
+    cand = d[(d["Kans"] > 10) & (d["MFI raw"] < 90) & (d["Vol %"] < 60)].sort_values("Kans", ascending=False).head(max(30, 4 * n_pick))
+    held = [t_ for t_ in pf_load()["positions"] if t_ in P["Close"].columns]
+    chosen, corr_, per_group = [], {}, {}
+    if len(cand) and not red:
+        Cm = P["Close"][list(dict.fromkeys(list(cand.index) + held))].pct_change(fill_method=None).tail(120).corr()
+        pool = list(cand.index)
+        while len(chosen) < n_pick and pool:
+            best, bs, bac = None, -1e9, 0.0
+            for t_ in pool:
+                ref = [x_ for x_ in held + chosen if x_ != t_]
+                ac = float(Cm.loc[t_, ref].mean()) if ref else 0.0
+                ac = 0.0 if pd.isna(ac) else ac
+                sc_ = cand.at[t_, "Kans"] - 30 * max(ac, 0.0)          # a correlation of 1 with the book costs 30 points
+                if sc_ > bs:
+                    best, bs, bac = t_, sc_, ac
+            pool.remove(best)
+            g_ = cand.at[best, "Group"]
+            if best in held or per_group.get(g_, 0) >= 2:
+                continue
+            if not light and cand.at[best, "Totaal"] > 25 and is_cheap(best):
+                continue
+            chosen.append(best)
+            corr_[best], per_group[g_] = bac, per_group.get(g_, 0) + 1
+    picks = cand.loc[chosen].copy()
+    picks["Corr"] = pd.Series(corr_)
+    wgt = pd.Series(dtype=float)
+    if not picks.empty:
+        inv = 1 / picks["Vol %"].clip(lower=5)
+        wgt = (inv / inv.sum() * 100).clip(upper=35)
+        wgt = wgt / wgt.sum() * 100
+    avoid = d[d["Kans"] < -20].sort_values("Kans").head(n_pick)
+    if not light:
+        ss["_an_ev"] = {"w": w, "t": ts, "strength": strength, "red": red, "held": len(held)}
+    return d, picks, wgt, avoid, strength == "BEWEZEN"
+
+
+def analyst_select_legacy(scope, n_pick: int, ml):
+    """The first analyst (70% flow score, 30% model). Kept only so that its picks stay logged and measurable."""
     d = all_signals()
     d = d[d.index.isin(META.index)].copy()
     proven = ml_verdict(ml)[1]
@@ -1977,10 +2051,11 @@ def remember():
     mem_write("INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?,?,?,?,?)",
               [(bar, t, f(r["Last"]), f(r["5D"]), f(r["20D"]), f(r["60D"]), f(r["Totaal"]), r["Signaal"], r["Fase"], f(mdl[t])) for t, r in sg.iterrows()])
     for lab, sc in SCOPES.items():
-        _, picks, wgt, _, _ = analyst_select(sc, 5, ml_)
-        mem_write("DELETE FROM analyst_log WHERE date=? AND scope=?", [(bar, lab)])
-        mem_write("INSERT OR REPLACE INTO analyst_log VALUES (?,?,?,?,?,?,?,?)",
-                  [(bar, lab, i, t, float(r["Kans"]), float(wgt[t]), f(r["Last"]), int(ml_ is not None)) for i, (t, r) in enumerate(picks.iterrows(), 1)])
+        for lab_, fn_ in ((lab, lambda: analyst_select(sc, 5, ml_, light=True)), ("OUD · " + lab, lambda: analyst_select_legacy(sc, 5, ml_))):
+            _, picks, wgt, _, _ = fn_()
+            mem_write("DELETE FROM analyst_log WHERE date=? AND scope=?", [(bar, lab_)])
+            mem_write("INSERT OR REPLACE INTO analyst_log VALUES (?,?,?,?,?,?,?,?)",
+                      [(bar, lab_, i, t, float(r["Kans"]), float(wgt[t]), f(r["Last"]), int(ml_ is not None)) for i, (t, r) in enumerate(picks.iterrows(), 1)])
     if ml_:
         b_, h_ = ml_["best"], ml_["best"]["hold"]
         verdict = ml_verdict(ml_)[0]
@@ -2031,22 +2106,27 @@ def analyst():
         scope = SCOPES[st.radio("Waar zoeken", list(SCOPES), horizontal=True, key="an_scope", label_visibility="collapsed")]
     with c2_:
         n_pick = st.select_slider("Aantal ideeën", [3, 5, 8, 10], value=5, key="an_n")
+    try:
+        ss["_q"] = get_quant()
+    except Exception:
+        ss["_q"] = None
     d, picks, wgt, avoid, proven = analyst_select(scope, n_pick, ml)
+    ev_ = ss.get("_an_ev", {"w": {}, "t": {}, "strength": "GEEN", "red": False, "held": 0})
 
     klimaat = ("risk-on: beleggers zoeken risico op" if rs_ > 15 else "risk-off: beleggers mijden risico" if rs_ < -15 else "gemengd: geen duidelijke richting")
-    if ml:
-        hd_ = ml["best"]["hold"]
-        mtxt = (f"Het voorspelmodel is op ongeziene data <b style='color:{GREEN}'>aantoonbaar voorspellend</b> (t = {hd_['ic_t']:+.1f}); het weegt hieronder voor 60% mee."
-                if proven else
-                f"Het voorspelmodel is op ongeziene data <b style='color:{AMBER}'>niet overtuigend</b> (t = {hd_['ic_t']:+.1f}); het weegt hieronder daarom maar voor 30% mee en de geldstromen voor 70%.")
-    else:
-        mtxt = "Het voorspelmodel is niet beschikbaar; de selectie steunt alleen op geldstromen."
+    sc_ = {"BEWEZEN": GREEN, "ZWAK": AMBER, "GEEN": RED}[ev_["strength"]]
+    wtxt = " · ".join(f"{k_} {v_ * 100:.0f}% (t = {ev_['t'][k_]:+.1f})" for k_, v_ in ev_["w"].items())
+    mtxt = (f"<br><b>Bewijs voor een voorsprong op de markt: <span style='color:{sc_}'>{ev_['strength']}</span>.</b> Gewichten volgen het bewijs op ongeziene data: {wtxt}. "
+            + ("" if ev_["strength"] == "BEWEZEN" else "Zolang het bewijs ontbreekt is een wereldindexfonds de eerlijke basiskeuze; "
+               "de selectie hieronder is dan vooral een goed gespreide mand, geen voorspelling. ")
+            + f"Kandidaten zijn gekozen op wat ze toevoegen aan je {ev_['held']} huidige posities: weinig samenhang, hooguit twee per sector of land.")
     st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12.5px;line-height:1.8'><b>Marktbeeld.</b> Klimaat: "
                 f"<span style='color:{col(rs_)}'>{klimaat}</span> (meter {rs_:+.0f}). {(d['Totaal'] > 10).mean() * 100:.0f}% van de bekeken instrumenten heeft "
                 f"netto instroom. {mtxt}</div>", unsafe_allow_html=True)
 
     if picks.empty:
-        st.warning("Geen enkel instrument voldoet nu aan de eisen (positieve geldstroom op middellange termijn, positieve modelverwachting, niet oververhit). "
+        st.warning("Het marktalarm staat op ROOD: de analist stelt dan geen aankopen voor. Bewaak je bestaande posities in de portefeuille." if ev_["red"] else
+                   "Geen enkel instrument voldoet nu aan de eisen (voldoende score, niet oververhit, niet extreem beweeglijk, toevoegend aan je portefeuille). "
                    "Dat is ook een uitkomst: de data geeft op dit moment geen koopkandidaten in deze selectie.")
     else:
         st.markdown(f"<div class='sec'>Koopkandidaten · horizon ± {H} handelsdagen</div>", unsafe_allow_html=True)
@@ -2063,8 +2143,14 @@ def analyst():
                 warn.append(f"het model verwacht ondergemiddeld rendement (modelscore {r_['Model']:+.0f})")
             if min(r_["5D"], r_["20D"], r_["60D"]) > 10:
                 why.append(f"instroom op alle termijnen (5D {r_['5D']:+.0f} · 20D {r_['20D']:+.0f} · 60D {r_['60D']:+.0f})")
-            else:
+            elif r_["Totaal"] > 10:
                 why.append(f"instroom op middellange termijn (20D {r_['20D']:+.0f}, 60D {r_['60D']:+.0f}, 5D {r_['5D']:+.0f})")
+            else:
+                warn.append(f"geen duidelijke instroom (20D {r_['20D']:+.0f}, 60D {r_['60D']:+.0f})")
+            if pd.notna(r_.get("Kwant")) and r_["Kwant"] > 20:
+                why.append(f"kwantscore bovengemiddeld ({r_['Kwant']:+.0f})")
+            if pd.notna(r_.get("Corr")):
+                (why if r_["Corr"] < 0.35 else warn).append(f"{'weinig' if r_['Corr'] < 0.35 else 'veel'} samenhang met je portefeuille en de andere kandidaten (correlatie {r_['Corr']:.2f})")
             if r_["Fase"] == "versnelt":
                 why.append("de instroom versnelt")
             if r_["RVOL"] > 1.25:

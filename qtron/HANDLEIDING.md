@@ -55,7 +55,21 @@ Status: IN OBSERVATIE (minder dan 20 dagen in positie), LIVE BEVESTIGD (t boven 
 
 ## De analist
 
-De analist combineert de geldstroomscore (70%) met het voorspelmodel (30%; 60% zodra het model bewezen is). Per kandidaat staan de redenen en de aandachtspunten, zoals winstcijfers binnen een week, een rood marktalarm, of een plaats in een van de patronen. De analist leest geen nieuws en kent je vermogen niet.
+De analist werkt in drie stappen.
+
+1. **Gewichten volgen het bewijs.** Geldstroom, voorspelmodel en kwantscore wegen mee naar de mate waarin ze op ongeziene data werkten. Bovenaan staat hoe sterk dat bewijs is: GEEN, ZWAK of BEWEZEN. Zolang het niet BEWEZEN is, is een wereldindexfonds de eerlijke basiskeuze en is de selectie vooral een goed gespreide mand.
+2. **Kiezen wat je portefeuille beter maakt.** Kandidaten met weinig samenhang met je huidige posities krijgen voorrang; hooguit twee per sector of land.
+3. **Uitsluiten.** Geen voorstellen bij een rood marktalarm; extreem beweeglijke aandelen en "goedkoop met sterke instroom" vallen af.
+
+Per kandidaat staan de redenen en de aandachtspunten, zoals winstcijfers binnen een week. De analist leest geen nieuws en kent je vermogen niet. De eerste versie (70% geldstroom, 30% model) loopt op de achtergrond mee: onder ARCHIEF staan beide trackrecords, de oude met het voorvoegsel "OUD".
+
+## Zo test je Qtron op lange termijn
+
+1. Koop niet alles in één keer en niet elke dag. Leg **één keer per maand, op een vaste dag**, een vast bedrag in (bijvoorbeeld 10.000 van de 100.000), gelijk verdeeld over de voorstellen van de analist.
+2. Houd elke maandaankoop ongeveer 60 handelsdagen aan en verkoop dan, tenzij de portefeuille eerder een verkoopsignaal geeft. Kies die regel vooraf en wijk er niet van af.
+3. Vul bij elke order de reden in. Het DAGBOEK vergelijkt elke aankoop met de wereldindex over dezelfde periode.
+4. Beoordeel op het verschil met de index, niet op de winst. Reken op minstens een jaar voordat het iets zegt.
+5. Open Qtron op zoveel mogelijk handelsdagen: het legt dan automatisch de selectie van de analist vast, ook als je niets koopt. Dat trackrecord (ARCHIEF) is de zuiverste meting.
 
 ## Portefeuille
 
