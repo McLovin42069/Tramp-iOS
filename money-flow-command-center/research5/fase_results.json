@@ -1,0 +1,426 @@
+{
+ "alle met positief signaal": {
+  "versnelt": {
+   "5d": {
+    "zoek": {
+     "n": 30065,
+     "gem_pct": -0.04,
+     "t": -0.8,
+     "pos_pct": 45,
+     "mandjes": 346
+    },
+    "toets": {
+     "n": 13356,
+     "gem_pct": 0.03,
+     "t": 0.32,
+     "pos_pct": 56,
+     "mandjes": 149
+    },
+    "toets_ruw": 0.3
+   },
+   "20d": {
+    "zoek": {
+     "n": 7448,
+     "gem_pct": 0.26,
+     "t": 1.38,
+     "pos_pct": 53,
+     "mandjes": 86
+    },
+    "toets": {
+     "n": 3266,
+     "gem_pct": -0.54,
+     "t": -1.51,
+     "pos_pct": 54,
+     "mandjes": 37
+    },
+    "toets_ruw": 0.63
+   },
+   "30d": {
+    "zoek": {
+     "n": 5083,
+     "gem_pct": -0.2,
+     "t": -0.7,
+     "pos_pct": 46,
+     "mandjes": 57
+    },
+    "toets": {
+     "n": 1957,
+     "gem_pct": -0.61,
+     "t": -0.88,
+     "pos_pct": 46,
+     "mandjes": 24
+    },
+    "toets_ruw": 1.1
+   },
+   "60d": {
+    "zoek": {
+     "n": 2501,
+     "gem_pct": 0.12,
+     "t": 0.28,
+     "pos_pct": 43,
+     "mandjes": 28
+    },
+    "toets": {
+     "n": 1001,
+     "gem_pct": -0.03,
+     "t": -0.03,
+     "pos_pct": 50,
+     "mandjes": 12
+    },
+    "toets_ruw": 3.87
+   }
+  },
+  "stabiel": {
+   "5d": {
+    "zoek": {
+     "n": 16663,
+     "gem_pct": -0.06,
+     "t": -0.95,
+     "pos_pct": 45,
+     "mandjes": 346
+    },
+    "toets": {
+     "n": 7353,
+     "gem_pct": 0.07,
+     "t": 0.81,
+     "pos_pct": 54,
+     "mandjes": 149
+    },
+    "toets_ruw": 0.39
+   },
+   "20d": {
+    "zoek": {
+     "n": 4168,
+     "gem_pct": 0.03,
+     "t": 0.14,
+     "pos_pct": 43,
+     "mandjes": 86
+    },
+    "toets": {
+     "n": 1803,
+     "gem_pct": -0.33,
+     "t": -0.68,
+     "pos_pct": 49,
+     "mandjes": 37
+    },
+    "toets_ruw": 0.98
+   },
+   "30d": {
+    "zoek": {
+     "n": 2837,
+     "gem_pct": -0.25,
+     "t": -0.75,
+     "pos_pct": 53,
+     "mandjes": 57
+    },
+    "toets": {
+     "n": 1182,
+     "gem_pct": -0.34,
+     "t": -0.45,
+     "pos_pct": 58,
+     "mandjes": 24
+    },
+    "toets_ruw": 1.72
+   },
+   "60d": {
+    "zoek": {
+     "n": 1379,
+     "gem_pct": -0.2,
+     "t": -0.33,
+     "pos_pct": 46,
+     "mandjes": 28
+    },
+    "toets": {
+     "n": 654,
+     "gem_pct": 0.34,
+     "t": 0.41,
+     "pos_pct": 67,
+     "mandjes": 12
+    },
+    "toets_ruw": 4.46
+   }
+  },
+  "verzwakt": {
+   "5d": {
+    "zoek": {
+     "n": 19930,
+     "gem_pct": -0.02,
+     "t": -0.24,
+     "pos_pct": 52,
+     "mandjes": 345
+    },
+    "toets": {
+     "n": 8765,
+     "gem_pct": -0.01,
+     "t": -0.13,
+     "pos_pct": 54,
+     "mandjes": 149
+    },
+    "toets_ruw": 0.34
+   },
+   "20d": {
+    "zoek": {
+     "n": 4718,
+     "gem_pct": -0.02,
+     "t": -0.11,
+     "pos_pct": 49,
+     "mandjes": 86
+    },
+    "toets": {
+     "n": 2227,
+     "gem_pct": -0.19,
+     "t": -0.45,
+     "pos_pct": 59,
+     "mandjes": 37
+    },
+    "toets_ruw": 1.09
+   },
+   "30d": {
+    "zoek": {
+     "n": 3394,
+     "gem_pct": -0.56,
+     "t": -1.43,
+     "pos_pct": 44,
+     "mandjes": 57
+    },
+    "toets": {
+     "n": 1474,
+     "gem_pct": -0.19,
+     "t": -0.32,
+     "pos_pct": 50,
+     "mandjes": 24
+    },
+    "toets_ruw": 1.89
+   },
+   "60d": {
+    "zoek": {
+     "n": 1606,
+     "gem_pct": -0.72,
+     "t": -0.71,
+     "pos_pct": 43,
+     "mandjes": 28
+    },
+    "toets": {
+     "n": 875,
+     "gem_pct": 1.15,
+     "t": 1.93,
+     "pos_pct": 75,
+     "mandjes": 12
+    },
+    "toets_ruw": 5.07
+   }
+  }
+ },
+ "top 15 instroom": {
+  "versnelt": {
+   "5d": {
+    "zoek": {
+     "n": 2351,
+     "gem_pct": -0.1,
+     "t": -0.9,
+     "pos_pct": 45,
+     "mandjes": 345
+    },
+    "toets": {
+     "n": 982,
+     "gem_pct": 0.17,
+     "t": 0.65,
+     "pos_pct": 52,
+     "mandjes": 149
+    },
+    "toets_ruw": 0.42
+   },
+   "20d": {
+    "zoek": {
+     "n": 589,
+     "gem_pct": 0.31,
+     "t": 0.91,
+     "pos_pct": 56,
+     "mandjes": 86
+    },
+    "toets": {
+     "n": 234,
+     "gem_pct": 0.7,
+     "t": 0.67,
+     "pos_pct": 59,
+     "mandjes": 37
+    },
+    "toets_ruw": 2.02
+   },
+   "30d": {
+    "zoek": {
+     "n": 353,
+     "gem_pct": -0.76,
+     "t": -1.24,
+     "pos_pct": 42,
+     "mandjes": 57
+    },
+    "toets": {
+     "n": 151,
+     "gem_pct": 2.57,
+     "t": 0.79,
+     "pos_pct": 50,
+     "mandjes": 24
+    },
+    "toets_ruw": 4.77
+   },
+   "60d": {
+    "zoek": {
+     "n": 175,
+     "gem_pct": -0.6,
+     "t": -0.5,
+     "pos_pct": 46,
+     "mandjes": 28
+    },
+    "toets": {
+     "n": 67,
+     "gem_pct": 3.8,
+     "t": 0.95,
+     "pos_pct": 42,
+     "mandjes": 12
+    },
+    "toets_ruw": 8.42
+   }
+  },
+  "stabiel": {
+   "5d": {
+    "zoek": {
+     "n": 1651,
+     "gem_pct": -0.11,
+     "t": -0.71,
+     "pos_pct": 44,
+     "mandjes": 343
+    },
+    "toets": {
+     "n": 791,
+     "gem_pct": 0.09,
+     "t": 0.37,
+     "pos_pct": 49,
+     "mandjes": 148
+    },
+    "toets_ruw": 0.4
+   },
+   "20d": {
+    "zoek": {
+     "n": 391,
+     "gem_pct": 0.35,
+     "t": 0.62,
+     "pos_pct": 48,
+     "mandjes": 85
+    },
+    "toets": {
+     "n": 206,
+     "gem_pct": -0.0,
+     "t": -0.0,
+     "pos_pct": 51,
+     "mandjes": 37
+    },
+    "toets_ruw": 1.35
+   },
+   "30d": {
+    "zoek": {
+     "n": 295,
+     "gem_pct": 0.23,
+     "t": 0.24,
+     "pos_pct": 39,
+     "mandjes": 57
+    },
+    "toets": {
+     "n": 133,
+     "gem_pct": 2.67,
+     "t": 1.71,
+     "pos_pct": 62,
+     "mandjes": 24
+    },
+    "toets_ruw": 5.24
+   },
+   "60d": {
+    "zoek": {
+     "n": 136,
+     "gem_pct": -1.09,
+     "t": -0.63,
+     "pos_pct": 39,
+     "mandjes": 28
+    },
+    "toets": {
+     "n": 78,
+     "gem_pct": 3.23,
+     "t": 1.53,
+     "pos_pct": 75,
+     "mandjes": 12
+    },
+    "toets_ruw": 7.23
+   }
+  },
+  "verzwakt": {
+   "5d": {
+    "zoek": {
+     "n": 1187,
+     "gem_pct": 0.1,
+     "t": 0.35,
+     "pos_pct": 44,
+     "mandjes": 328
+    },
+    "toets": {
+     "n": 462,
+     "gem_pct": 0.19,
+     "t": 0.6,
+     "pos_pct": 49,
+     "mandjes": 138
+    },
+    "toets_ruw": 0.57
+   },
+   "20d": {
+    "zoek": {
+     "n": 310,
+     "gem_pct": -0.68,
+     "t": -1.13,
+     "pos_pct": 39,
+     "mandjes": 83
+    },
+    "toets": {
+     "n": 115,
+     "gem_pct": -0.03,
+     "t": -0.03,
+     "pos_pct": 47,
+     "mandjes": 36
+    },
+    "toets_ruw": 1.31
+   },
+   "30d": {
+    "zoek": {
+     "n": 204,
+     "gem_pct": -0.01,
+     "t": -0.01,
+     "pos_pct": 39,
+     "mandjes": 54
+    },
+    "toets": {
+     "n": 74,
+     "gem_pct": -1.46,
+     "t": -0.85,
+     "pos_pct": 39,
+     "mandjes": 23
+    },
+    "toets_ruw": 1.1
+   },
+   "60d": {
+    "zoek": {
+     "n": 109,
+     "gem_pct": -3.12,
+     "t": -1.32,
+     "pos_pct": 41,
+     "mandjes": 27
+    },
+    "toets": {
+     "n": 35,
+     "gem_pct": 2.65,
+     "t": 0.82,
+     "pos_pct": 42,
+     "mandjes": 12
+    },
+    "toets_ruw": 7.45
+   }
+  }
+ }
+}
