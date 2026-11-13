@@ -8,6 +8,10 @@ Aanpassingen die afgesproken zijn maar nog niet gebouwd. Volgorde is geen priori
 4. **Optie- en kwartierdata toetsen** als het archief ongeveer 120 handelsdagen bevat (rond mei 2027): onderscheidt het vroege instroom die doorzet van instroom die omkeert?
 5. **Universum automatisch verversen** (nu handmatig met `python build_universe.py`), en dezelfde uitbreiding voor Europa en Azië.
 
+## Al gebouwd, wacht op jouw akkoord om te installeren
+
+- **Universum naar 1.540 instrumenten** (1.028 Amerikaanse aandelen, SpaceX, 24 beursindices; nieuwe noteringen tellen mee na 80 dagen). Zit in de laatste installer. Niet installeren = alles blijft zoals het was.
+
 ## Getoetst en afgewezen (niet opnieuw proberen zonder nieuwe data)
 
 Uitkomsten staan in `money-flow-command-center/research5/`.
