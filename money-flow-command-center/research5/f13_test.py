@@ -19,7 +19,8 @@ P = ns["_clean"]({k: pd.concat([core[k], st[k].reindex(core[k].index).astype(flo
 groups, classes = META["group"].reindex(P["Close"].columns), META["cls"].reindex(P["Close"].columns)
 H = pd.read_pickle("sec/f13.pkl")
 H = H[(H["filed"] - H["period"]).dt.days.between(0, 47) & (H["shares"] > 0)]
-us = [c for c in P["Close"].columns if c in set(H["ticker"])]
+_held = set(H["ticker"].unique())
+us = [c for c in P["Close"].columns if c in _held]
 S = {n: ns["composite"](ns["flow_panels"](P, n, groups, classes), W)[us] for n in (5, 20, 60)}
 C = P["Close"][us]
 idx = C.index
@@ -31,7 +32,9 @@ periods = sorted(p for p in cnt.index[cnt > 2000] if pd.Timestamp(p).is_quarter_
 BYP = {p: g.pivot_table(index="cik", columns="ticker", values="shares", aggfunc="sum") for p, g in H[H["period"].isin(periods)].groupby("period")}
 print("kwartalen", len(periods), flush=True)
 sig = {"breedte: nieuwe houders min vertrekkers": {}, "aandeel fondsen dat bijkocht min afbouwde": {}, "geconcentreerde fondsen (10-60 posities): bijkopers min afbouwers": {}}
+print("start loop", flush=True)
 for p0, p1 in zip(periods[:-1], periods[1:]):
+    print(p1, flush=True)
     if (pd.Timestamp(p1) - pd.Timestamp(p0)).days > 100:
         continue
     a, b = BYP[p0], BYP[p1]

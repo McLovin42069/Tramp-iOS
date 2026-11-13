@@ -1,0 +1,193 @@
+{
+ "A_rangschikking": {
+  "breedte: nieuwe houders min vertrekkers": {
+   "20d": {
+    "zoek": {
+     "kwartalen": 30,
+     "ic": -0.011,
+     "ic_t": -0.38,
+     "top_min_bodem_pct": -0.24,
+     "spread_t": -0.4
+    },
+    "toets": {
+     "kwartalen": 11,
+     "ic": -0.0193,
+     "ic_t": -0.37,
+     "top_min_bodem_pct": -0.64,
+     "spread_t": -0.4
+    }
+   },
+   "60d": {
+    "zoek": {
+     "kwartalen": 30,
+     "ic": 0.0001,
+     "ic_t": 0.0,
+     "top_min_bodem_pct": 0.47,
+     "spread_t": 0.39
+    },
+    "toets": {
+     "kwartalen": 11,
+     "ic": -0.0164,
+     "ic_t": -0.38,
+     "top_min_bodem_pct": 0.44,
+     "spread_t": 0.18
+    }
+   }
+  },
+  "aandeel fondsen dat bijkocht min afbouwde": {
+   "20d": {
+    "zoek": {
+     "kwartalen": 30,
+     "ic": 0.0011,
+     "ic_t": 0.04,
+     "top_min_bodem_pct": 0.05,
+     "spread_t": 0.07
+    },
+    "toets": {
+     "kwartalen": 11,
+     "ic": -0.0178,
+     "ic_t": -0.37,
+     "top_min_bodem_pct": -0.22,
+     "spread_t": -0.14
+    }
+   },
+   "60d": {
+    "zoek": {
+     "kwartalen": 30,
+     "ic": 0.0012,
+     "ic_t": 0.04,
+     "top_min_bodem_pct": 0.65,
+     "spread_t": 0.49
+    },
+    "toets": {
+     "kwartalen": 11,
+     "ic": -0.0107,
+     "ic_t": -0.21,
+     "top_min_bodem_pct": 0.94,
+     "spread_t": 0.36
+    }
+   }
+  },
+  "geconcentreerde fondsen (10-60 posities): bijkopers min afbouwers": {
+   "20d": {
+    "zoek": {
+     "kwartalen": 30,
+     "ic": 0.0087,
+     "ic_t": 0.5,
+     "top_min_bodem_pct": 0.4,
+     "spread_t": 0.97
+    },
+    "toets": {
+     "kwartalen": 11,
+     "ic": -0.0263,
+     "ic_t": -0.68,
+     "top_min_bodem_pct": -0.08,
+     "spread_t": -0.06
+    }
+   },
+   "60d": {
+    "zoek": {
+     "kwartalen": 30,
+     "ic": -0.0038,
+     "ic_t": -0.22,
+     "top_min_bodem_pct": 0.54,
+     "spread_t": 0.77
+    },
+    "toets": {
+     "kwartalen": 11,
+     "ic": -0.0373,
+     "ic_t": -1.02,
+     "top_min_bodem_pct": -0.05,
+     "spread_t": -0.02
+    }
+   }
+  }
+ },
+ "B_vroege_instroom": {
+  "vroeg signaal, alle": {
+   "20d": {
+    "zoek": {
+     "n": 16387,
+     "gem_pct": 0.07,
+     "t": 0.61
+    },
+    "toets": {
+     "n": 7717,
+     "gem_pct": 0.07,
+     "t": 0.82
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 16387,
+     "gem_pct": -0.13,
+     "t": -0.53
+    },
+    "toets": {
+     "n": 7261,
+     "gem_pct": -0.09,
+     "t": -0.38
+    }
+   }
+  },
+  "vroeg signaal + fondsen kochten bij (bovenste derde)": {
+   "20d": {
+    "zoek": {
+     "n": 5024,
+     "gem_pct": 0.01,
+     "t": 0.34
+    },
+    "toets": {
+     "n": 2504,
+     "gem_pct": 0.09,
+     "t": 0.55
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 5024,
+     "gem_pct": -0.24,
+     "t": -0.21
+    },
+    "toets": {
+     "n": 2337,
+     "gem_pct": 0.78,
+     "t": 0.74
+    }
+   }
+  },
+  "vroeg signaal + fondsen bouwden af (onderste derde)": {
+   "20d": {
+    "zoek": {
+     "n": 4986,
+     "gem_pct": 0.21,
+     "t": 1.15
+    },
+    "toets": {
+     "n": 2612,
+     "gem_pct": 0.02,
+     "t": 0.71
+    }
+   },
+   "60d": {
+    "zoek": {
+     "n": 4986,
+     "gem_pct": 0.17,
+     "t": 0.18
+    },
+    "toets": {
+     "n": 2481,
+     "gem_pct": -0.94,
+     "t": -1.86
+    }
+   }
+  }
+ },
+ "meta": {
+  "aandelen": 294,
+  "kwartalen": 41,
+  "eerste_signaal": "2016-11-14",
+  "laatste_signaal": "2026-08-17",
+  "fondsen": 11186
+ }
+}
