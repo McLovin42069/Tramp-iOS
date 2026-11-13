@@ -98,3 +98,11 @@ To update an existing install, run `install-money-flow.sh` again.
   lookback x horizon pair; three hypotheses are fixed in `HZ_HYPOTHESES`; long horizons are averaged over 4 start days.
 - The model target is now the volatility-scaled return relative to the instrument's own sector/region.
 - A "proven" verdict requires t > 2 on at least `ML_MIN_PERIODS` unseen periods.
+
+## Memory and sell signals
+
+- **Memory** (`cache/geheugen.db`, SQLite): daily snapshot of every instrument's scores/signal/model forecast, the analyst's
+  picks per region, the model verdict, portfolio sell signals, and settings (weights, pins, timeframe). View: GEHEUGEN,
+  including the analyst's forward track record.
+- **Sell signals** (PORTEFEUILLE): rule-based advice per position (stop-loss, trailing stop, flow turning negative,
+  holding period, model), shown on every screen when triggered. Thresholds are portfolio settings.

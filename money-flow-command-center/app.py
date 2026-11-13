@@ -26,7 +26,9 @@ from __future__ import annotations
 
 import io
 import json
+import sqlite3
 import time
+from contextlib import closing
 import zlib
 from pathlib import Path
 from datetime import datetime, timezone
@@ -214,6 +216,52 @@ META = pd.DataFrame(U + _rows, columns=["ticker", "name", "cls", "group"]).drop_
 META["core"] = META.index.isin(_core)      # core = cross-asset ETFs/futures/FX that drive pools, regime and the live view
 STOCK_CLASSES = ["US Stocks", "Europe Stocks", "Asia Stocks"]
 CACHE_DIR = Path(__file__).parent / "cache"
+
+# ── Memory: a local SQLite database (cache/geheugen.db). It keeps what cannot be recomputed later:
+#    the signals, model forecasts, analyst picks and sell signals as they stood on each day, plus settings.
+MEM_FILE = CACHE_DIR / "geheugen.db"
+MEM_SCHEMA = """
+CREATE TABLE IF NOT EXISTS settings(key TEXT PRIMARY KEY, value TEXT);
+CREATE TABLE IF NOT EXISTS snapshots(date TEXT, ticker TEXT, last REAL, s5 REAL, s20 REAL, s60 REAL, totaal REAL, signaal TEXT, fase TEXT,
+                                     model REAL, PRIMARY KEY(date, ticker));
+CREATE TABLE IF NOT EXISTS analyst_log(date TEXT, scope TEXT, rank INTEGER, ticker TEXT, kans REAL, weight REAL, price REAL, with_model INTEGER,
+                                       PRIMARY KEY(date, scope, rank));
+CREATE TABLE IF NOT EXISTS model_log(date TEXT PRIMARY KEY, horizon INTEGER, depth INTEGER, val_t REAL, hold_ic REAL, hold_t REAL, hold_n INTEGER,
+                                     spread REAL, verdict TEXT);
+CREATE TABLE IF NOT EXISTS sell_log(date TEXT, ticker TEXT, advies TEXT, reden TEXT, PRIMARY KEY(date, ticker));
+"""
+
+
+def mem():
+    CACHE_DIR.mkdir(exist_ok=True)
+    con = sqlite3.connect(MEM_FILE, timeout=10)
+    con.executescript(MEM_SCHEMA)
+    return con
+
+
+def mem_write(sql: str, rows: list):
+    """Best-effort write: the memory must never be able to break the app."""
+    try:
+        with closing(mem()) as con, con:
+            con.executemany(sql, rows)
+    except Exception:
+        pass
+
+
+def mem_read(sql: str, params: tuple = ()) -> pd.DataFrame:
+    try:
+        with closing(mem()) as con:
+            return pd.read_sql_query(sql, con, params=params)
+    except Exception:
+        return pd.DataFrame()
+
+
+def mem_settings() -> dict:
+    d = mem_read("SELECT key, value FROM settings")
+    try:
+        return {k: json.loads(v) for k, v in zip(d["key"], d["value"])} if len(d) else {}
+    except Exception:
+        return {}
 
 # Sankey pools: (asset_class, group) -> pool. Classes not listed map to themselves.
 POOL_OF = {
@@ -640,8 +688,10 @@ def flow_panels(P: dict, n: int, groups: pd.Series, classes: pd.Series) -> dict:
     rvol = (Vx.rolling(n).mean() / base.where(base > 0)).where(has_vol, 1.0).fillna(1.0)
     vol_int = (np.tanh(ret / sig) * rvol / 1.5).clip(-1, 1)                # direction x relative volume
 
-    dollar = (mfm * tp * V).rolling(n).sum().where(has_vol)                 # signed $ proxy  (EXTENSION POINT)
-    gross = (tp * V).rolling(n).sum().where(has_vol)
+    # Yahoo reports crypto volume in USD already, so it must not be multiplied by the price again.
+    px_mult = tp.where(~np.array([str(c).endswith("-USD") for c in tp.columns])[None, :], 1.0)
+    dollar = (mfm * px_mult * V).rolling(n).sum().where(has_vol)            # signed $ proxy  (EXTENSION POINT)
+    gross = (px_mult * V).rolling(n).sum().where(has_vol)
 
     return {"CMF": (cmf * 2.5).clip(-1, 1), "MFI": ((mfi - 50) / 50).clip(-1, 1), "RS vs Peers": rs_peer,
             "RS vs Risk-On": rs_risk, "Flow Momentum": flow_mom, "Volume Intensity": vol_int,
@@ -1125,10 +1175,18 @@ def volume_profile_fig(P, t, days=60):
 # 6. STATE, SIDEBAR, DATA LOAD
 # ════════════════════════════════════════════════════════════════════════════
 ss = st.session_state
-VIEWS = ["SIGNALEN", "VOORSPELLING", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "PORTEFEUILLE", "METHODOLOGY", "HANDLEIDING"]
-if "pins" not in ss:
+VIEWS = ["SIGNALEN", "VOORSPELLING", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "PORTEFEUILLE", "GEHEUGEN", "METHODOLOGY", "HANDLEIDING"]
+if "pins" not in ss:                      # first run of this session: restore everything from memory
+    saved_ = mem_settings()
     qp = st.query_params.get("pins", "")
-    ss.pins = [p for p in qp.split(",") if p] or ["SPY", "TLT", "GLD", "UUP", "HYG", "BTC-USD"]
+    ss.pins = [p for p in qp.split(",") if p] or saved_.get("pins") or ["SPY", "TLT", "GLD", "UUP", "HYG", "BTC-USD"]
+    sw_ = saved_.get("weights") or {}
+    for c_ in COMP_COLS:
+        ss[f"w_{c_}"] = int(sw_.get(c_, DEFAULT_WEIGHTS[c_]))
+    ss["stocks"] = bool(saved_.get("stocks", True))
+    ss["auto"] = bool(saved_.get("auto", False))
+    ss["tf"] = saved_.get("tf") if saved_.get("tf") in TIMEFRAMES else "20D"
+    ss["extra"] = list(saved_.get("extra", []))
 ss.setdefault("view", VIEWS[0])
 ss.setdefault("ticker", "SPY")
 ss.setdefault("extra", [])
@@ -1187,11 +1245,11 @@ with st.sidebar:
                     help="Live = Yahoo Finance. Demo = synthetic data so the terminal can be explored offline.")
     if st.button("⟳ Refresh data", width="stretch"):
         st.cache_data.clear()
-    st.toggle("Aandelen wereldwijd (±690)", key="stocks", value=True,
+    st.toggle("Aandelen wereldwijd (±690)", key="stocks",
               help="Laadt ook losse aandelen uit de VS (incl. Nasdaq), Europa en Azië. Eerste keer ±2 minuten, daarna 6 uur op schijf bewaard.")
     st.toggle("Auto-refresh (5 min)", key="auto", help="Herlaadt de pagina elke 5 minuten. Dagdata ververst elke 15 min, LIVE 1D elke 4 min.")
     sec("Composite weights")
-    wt = tuple(st.slider(c, 0, 50, DEFAULT_WEIGHTS[c], 5, key=f"w_{c}") for c in COMP_COLS)
+    wt = tuple(st.slider(c, 0, 50, step=5, key=f"w_{c}") for c in COMP_COLS)
     if sum(wt) == 0:
         wt = tuple(DEFAULT_WEIGHTS.values())
     st.markdown(f"<div class='note'>Weights are renormalised to 100%. Score = Σ weight × component, each component in [-100, +100].</div>",
@@ -1259,7 +1317,7 @@ with c3:
 with c1:
     st.radio("View", VIEWS, key="view", horizontal=True, label_visibility="collapsed")
 with c2:
-    tf = st.radio("Timeframe", list(TIMEFRAMES), index=2, horizontal=True, label_visibility="collapsed", key="tf",
+    tf = st.radio("Timeframe", list(TIMEFRAMES), horizontal=True, label_visibility="collapsed", key="tf",
                   help="Lookback for every flow metric. LIVE 1D = last session on 15-minute bars. 5D = tactical, 20D = swing, 60D/120D = positioning.")
 N = TIMEFRAMES[tf]
 PF, bpd = P, 1                      # PF = panels the flow engine runs on (daily, or 15-minute bars in LIVE 1D)
@@ -1429,7 +1487,8 @@ def pf_load() -> dict:
     try:
         return json.loads(PF_FILE.read_text())
     except Exception:
-        return {"base": "EUR", "start": 100_000.0, "cash": 100_000.0, "fee_pct": 0.10, "realized": 0.0, "positions": {}, "trades": [], "history": {}}
+        return {"base": "EUR", "start": 100_000.0, "cash": 100_000.0, "fee_pct": 0.10, "realized": 0.0, "positions": {}, "trades": [], "history": {},
+                "stop_pct": 10.0, "trail_pct": 15.0, "horizon_days": 60}
 
 
 def pf_save(pf: dict):
@@ -1477,6 +1536,8 @@ def pf_trade(pf: dict, t: str, side: str, amount: float = None, qty: float = Non
         pf["realized"] += (px - pos["cost"]) * q - fee
         pos["qty"] -= q
     pos["last"] = px
+    pos.setdefault("opened", datetime.now().strftime("%Y-%m-%d"))
+    pos["high"] = max(pos.get("high", px), px)
     if pos["qty"] > 1e-9:
         pf["positions"][t] = pos
     else:
@@ -1493,13 +1554,120 @@ def pf_value(pf: dict):
     for t, pos in pf["positions"].items():
         px = pf_price(pf, t) or pos.get("last", pos["cost"])
         pos["last"] = px
+        pos["high"] = max(pos.get("high", px), px)
         val = pos["qty"] * px
+        opened = pos.get("opened", datetime.now().strftime("%Y-%m-%d"))
         rows.append({"Ticker": t, "Naam": META.loc[t, "name"] if t in META.index else t, "Aantal": pos["qty"], "Aankoop": pos["cost"], "Koers": px,
                      "Waarde": val, "Resultaat": val - pos["qty"] * pos["cost"], "Resultaat %": (px / pos["cost"] - 1) * 100 if pos["cost"] else 0.0,
-                     "Score 20D": float(snap.loc[t, "Score"]) if t in snap.index else np.nan})
+                     "Van top %": (px / pos["high"] - 1) * 100 if pos["high"] else 0.0,
+                     "Dagen": int(np.busday_count(opened, datetime.now().strftime("%Y-%m-%d")))})
     df = pd.DataFrame(rows).set_index("Ticker") if rows else pd.DataFrame()
     inv = float(df["Waarde"].sum()) if len(df) else 0.0
     return df, inv, pf["cash"] + inv
+
+
+def all_signals() -> pd.DataFrame:
+    """Combined 5D/20D/60D signal for every loaded instrument (including off-universe tickers)."""
+    if ss.get("_sig_key") != stamp + str(wt):
+        S_ = {k_: compute(P, stamp, n_, wt, tuple(ss.extra))[0] for k_, n_ in (("5D", 5), ("20D", 20), ("60D", 60))}
+        ss["_sig"] = signal_frame(S_["5D"], S_["20D"], S_["60D"]).join(S_["20D"][["CMF raw", "MFI raw", "RVOL", "RS vs Peers", "Last"]])
+        ss["_sig_key"] = stamp + str(wt)
+    return ss["_sig"]
+
+
+def ml_today():
+    """The forecast model if it has already been trained for today's data in this session, else None (never trains)."""
+    return ss.get("_ml") if ss.get("_ml_key") == f"ml|{P['Close'].index[-1].date()}|{P['Close'].shape}" else None
+
+
+def pf_advice(pf: dict, pos_df: pd.DataFrame) -> pd.DataFrame:
+    """Sell signals. Transparent risk-management rules, checked in this order:
+       VERKOPEN       stop-loss hit · trailing stop hit · money flow negative on 5 AND 20 days · outflow on all horizons
+       HERBEOORDELEN  20-day flow below zero · inflow fading · holding period elapsed · model expects under-performance
+       HOUDEN         none of the above
+    They limit losses and enforce discipline; they are not proven to predict prices."""
+    if pos_df.empty:
+        return pos_df
+    sg, ml_ = all_signals(), ml_today()
+    stop, trail, hor = pf.get("stop_pct", 10.0), pf.get("trail_pct", 15.0), pf.get("horizon_days", 60)
+    adv, why, s20 = [], [], []
+    for t, r in pos_df.iterrows():
+        sell, review = [], []
+        g = sg.loc[t] if t in sg.index else None
+        if r["Resultaat %"] <= -stop:
+            sell.append(f"stop-loss: {r['Resultaat %']:+.1f}% (grens −{stop:.0f}%)")
+        if r["Van top %"] <= -trail:
+            sell.append(f"{r['Van top %']:+.1f}% onder de hoogste koers sinds aankoop (grens −{trail:.0f}%)")
+        if g is not None:
+            if g["20D"] < -15 and g["5D"] < 0:
+                sell.append(f"geldstroom negatief op 5 en 20 dagen ({g['5D']:+.0f} / {g['20D']:+.0f})")
+            elif g["Totaal"] < -25:
+                sell.append(f"uitstroom over alle termijnen (totaal {g['Totaal']:+.0f})")
+            elif g["20D"] < 0:
+                review.append(f"20-daagse geldstroom onder nul ({g['20D']:+.0f})")
+            elif g["Fase"] == "verzwakt" and g["Totaal"] < 10:
+                review.append("instroom verzwakt")
+        if r["Dagen"] >= hor:
+            review.append(f"aanhoudperiode van {hor} handelsdagen verstreken")
+        if ml_ is not None and t in ml_["forecast"].index and ml_["forecast"][t] < -60:
+            review.append(f"model verwacht ondergemiddeld rendement ({ml_['forecast'][t]:+.0f})")
+        adv.append("VERKOPEN" if sell else "HERBEOORDELEN" if review else "HOUDEN")
+        why.append("; ".join(sell + review) or "geldstroom positief, geen grens geraakt")
+        s20.append(float(g["20D"]) if g is not None else np.nan)
+    out = pos_df.copy()
+    out.insert(1, "Advies", adv)
+    out["Score 20D"], out["Reden"] = s20, why
+    return out
+
+
+def analyst_select(scope, n_pick: int, ml):
+    """Shared selection logic of the analyst (used by the popup and by the daily memory log)."""
+    d = all_signals()
+    d = d[d.index.isin(META.index)].copy()
+    proven = bool(ml and ml["best"]["hold"]["ic_t"] > 2 and ml["best"]["hold"]["spread"] > 0 and ml["best"]["hold"]["n"] >= ML_MIN_PERIODS)
+    d["Model"] = ml["forecast"].reindex(d.index) if ml else np.nan
+    d["Vol %"] = P["Close"][d.index].pct_change(fill_method=None).tail(60).std() * np.sqrt(252) * 100
+    w_m = 0.6 if proven else 0.3                                   # lean on the model only when it has earned it
+    d["Kans"] = w_m * d["Model"].fillna(0) + (1 - w_m) * d["Totaal"]
+    if scope == "core":
+        d = d[META["core"].reindex(d.index).fillna(False)]
+    elif scope:
+        d = d[d["Class"] == scope]
+    d = d[~d["Class"].isin(["Cash", "Futures & Vol"]) & ~d["Group"].isin(["Spot Pairs", "Volatility"])]   # things you can actually buy and hold
+    picks = d[(d["Kans"] > 15) & (d["Totaal"] > 5) & (d["20D"] > 0) & (d["MFI raw"] < 90)].sort_values("Kans", ascending=False).head(n_pick)
+    wgt = pd.Series(dtype=float)
+    if not picks.empty:
+        inv = 1 / picks["Vol %"].clip(lower=5)
+        wgt = (inv / inv.sum() * 100).clip(upper=35)
+        wgt = wgt / wgt.sum() * 100
+    avoid = d[(d["Kans"] < -20) & (d["20D"] < 0)].sort_values("Kans").head(n_pick)
+    return d, picks, wgt, avoid, proven
+
+
+def remember():
+    """Write today's state to memory (once per trading day, and again when the model becomes available)."""
+    bar = str(P["Close"].index[-1].date())
+    ml_ = ml_today()
+    flag = (bar, ml_ is not None, P["Close"].shape[1], mode)
+    if demo or ss.get("_remembered") == flag:
+        return
+    sg = all_signals()
+    mdl = ml_["forecast"].reindex(sg.index) if ml_ else pd.Series(np.nan, index=sg.index)
+    f = lambda v: None if pd.isna(v) else float(v)
+    mem_write("INSERT OR REPLACE INTO snapshots VALUES (?,?,?,?,?,?,?,?,?,?)",
+              [(bar, t, f(r["Last"]), f(r["5D"]), f(r["20D"]), f(r["60D"]), f(r["Totaal"]), r["Signaal"], r["Fase"], f(mdl[t])) for t, r in sg.iterrows()])
+    for lab, sc in SCOPES.items():
+        _, picks, wgt, _, _ = analyst_select(sc, 5, ml_)
+        mem_write("DELETE FROM analyst_log WHERE date=? AND scope=?", [(bar, lab)])
+        mem_write("INSERT OR REPLACE INTO analyst_log VALUES (?,?,?,?,?,?,?,?)",
+                  [(bar, lab, i, t, float(r["Kans"]), float(wgt[t]), f(r["Last"]), int(ml_ is not None)) for i, (t, r) in enumerate(picks.iterrows(), 1)])
+    if ml_:
+        b_, h_ = ml_["best"], ml_["best"]["hold"]
+        sig_ok = h_["ic_t"] > 2 and h_["spread"] > 0
+        verdict = "JA" if sig_ok and h_["n"] >= ML_MIN_PERIODS else "VEELBELOVEND" if sig_ok else "ZWAK" if h_["ic"] > 0 and h_["spread"] > 0 else "NEE"
+        mem_write("INSERT OR REPLACE INTO model_log VALUES (?,?,?,?,?,?,?,?,?)",
+                  [(bar, b_["h"], b_["depth"], b_["val"]["ic_t"], h_["ic"], h_["ic_t"], h_["n"], h_["spread"], verdict)])
+    ss["_remembered"] = flag
 
 
 def get_ml():
@@ -1517,29 +1685,16 @@ def get_ml():
 def analyst():
     """Rule-based analyst: combines the forecast model, flow signals on three horizons, market regime,
     volume and volatility into a ranked shortlist with reasons, cautions and a sizing suggestion."""
-    S_ = {k_: compute(P, stamp, n_, wt, tuple(ss.extra))[0] for k_, n_ in (("5D", 5), ("20D", 20), ("60D", 60))}
-    S_ = {k_: v_[v_.index.isin(META.index)] for k_, v_ in S_.items()}
-    d = signal_frame(S_["5D"], S_["20D"], S_["60D"]).join(S_["20D"][["CMF raw", "MFI raw", "RVOL", "RS vs Peers", "Last"]])
     ml = get_ml()
-    proven = bool(ml and ml["best"]["hold"]["ic_t"] > 2 and ml["best"]["hold"]["spread"] > 0 and ml["best"]["hold"]["n"] >= ML_MIN_PERIODS)
-    d["Model"] = ml["forecast"].reindex(d.index) if ml else np.nan
-    d["Vol %"] = P["Close"][d.index].pct_change(fill_method=None).tail(60).std() * np.sqrt(252) * 100
-    w_m = 0.6 if proven else 0.3                                   # lean on the model only when it has earned it
-    d["Kans"] = w_m * d["Model"].fillna(0) + (1 - w_m) * d["Totaal"]
     reg_ = regime_table(P, 20)
     rs_ = float(reg_["Vote"].mean()) if len(reg_) else 0.0
     H = ml["best"]["h"] if ml else 20
-
     c1_, c2_ = st.columns([3, 1])
     with c1_:
         scope = SCOPES[st.radio("Waar zoeken", list(SCOPES), horizontal=True, key="an_scope", label_visibility="collapsed")]
     with c2_:
         n_pick = st.select_slider("Aantal ideeën", [3, 5, 8, 10], value=5, key="an_n")
-    if scope == "core":
-        d = d[META["core"].reindex(d.index).fillna(False)]
-    elif scope:
-        d = d[d["Class"] == scope]
-    d = d[~d["Class"].isin(["Cash", "Futures & Vol"]) & ~d["Group"].isin(["Spot Pairs", "Volatility"])]   # things you can actually buy and hold
+    d, picks, wgt, avoid, proven = analyst_select(scope, n_pick, ml)
 
     klimaat = ("risk-on: beleggers zoeken risico op" if rs_ > 15 else "risk-off: beleggers mijden risico" if rs_ < -15 else "gemengd: geen duidelijke richting")
     if ml:
@@ -1553,15 +1708,10 @@ def analyst():
                 f"<span style='color:{col(rs_)}'>{klimaat}</span> (meter {rs_:+.0f}). {(d['Totaal'] > 10).mean() * 100:.0f}% van de bekeken instrumenten heeft "
                 f"netto instroom. {mtxt}</div>", unsafe_allow_html=True)
 
-    cand = d[(d["Kans"] > 15) & (d["Totaal"] > 5) & (d["20D"] > 0) & (d["MFI raw"] < 90)].sort_values("Kans", ascending=False)
-    picks = cand.head(n_pick)
     if picks.empty:
         st.warning("Geen enkel instrument voldoet nu aan de eisen (positieve geldstroom op middellange termijn, positieve modelverwachting, niet oververhit). "
                    "Dat is ook een uitkomst: de data geeft op dit moment geen koopkandidaten in deze selectie.")
     else:
-        inv = 1 / picks["Vol %"].clip(lower=5)
-        wgt = (inv / inv.sum() * 100).clip(upper=35)
-        wgt = wgt / wgt.sum() * 100
         st.markdown(f"<div class='sec'>Koopkandidaten · horizon ± {H} handelsdagen</div>", unsafe_allow_html=True)
         for i_, (t_, r_) in enumerate(picks.iterrows(), 1):
             why, warn = [], []
@@ -1604,7 +1754,6 @@ def analyst():
                 ss["_pf_msg"] = " · ".join(msgs)
                 goto(None, "PORTEFEUILLE")
                 st.rerun()
-    avoid = d[(d["Kans"] < -20) & (d["20D"] < 0)].sort_values("Kans").head(n_pick)
     if len(avoid):
         st.markdown("<div class='sec'>Nu liever niet · sterkste uitstroom en zwakste verwachting</div>", unsafe_allow_html=True)
         st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12.5px;line-height:1.8'>" + " · ".join(
@@ -1625,6 +1774,26 @@ Ook een aantoonbaar voorspellend model heeft een kleine statistische voorsprong 
 # ════════════════════════════════════════════════════════════════════════════
 # 7. VIEWS
 # ════════════════════════════════════════════════════════════════════════════
+# ── portfolio watch: sell signals are checked on every run and shown on every screen ──
+try:
+    _pf = pf_load()
+    if _pf["positions"]:
+        _adv = pf_advice(_pf, pf_value(_pf)[0])
+        _flag = _adv[_adv["Advies"] != "HOUDEN"]
+        if len(_flag):
+            mem_write("INSERT OR REPLACE INTO sell_log VALUES (?,?,?,?)",
+                      [(str(P["Close"].index[-1].date()), t_, r_["Advies"], r_["Reden"]) for t_, r_ in _flag.iterrows()])
+        _sell = _adv.index[_adv["Advies"] == "VERKOPEN"].tolist()
+        if _sell and ss.view != "PORTEFEUILLE":
+            gb1, gb2 = st.columns([5, 1])
+            with gb1:
+                st.markdown(f"<div class='banner' style='border-color:{RED};color:{RED};background:#1f0a10'>PORTEFEUILLE · verkoopsignaal voor "
+                            f"{', '.join(_sell)}</div>", unsafe_allow_html=True)
+            with gb2:
+                st.button("Bekijk", on_click=goto, args=(None, "PORTEFEUILLE"), width="stretch", key="go_pf")
+except Exception:
+    pass
+
 view = ss.view
 if open_analyst:
     analyst()
@@ -1878,6 +2047,7 @@ elif view == "VOORSPELLING":
 elif view == "PORTEFEUILLE":
     pf = pf_load()
     pos_df, invested, total = pf_value(pf)
+    pos_df = pf_advice(pf, pos_df)
     today = datetime.now().strftime("%Y-%m-%d")
     if pf["positions"] or pf["trades"]:
         pf["history"][today] = round(total, 2)
@@ -1932,22 +2102,40 @@ elif view == "PORTEFEUILLE":
     sec("Posities · klik een rij voor de detailpagina")
     if len(pos_df):
         pos_df["Gewicht %"] = pos_df["Waarde"] / total * 100
-        ev = st.dataframe(pos_df.style.map(lambda v: f"color:{GREEN}" if v > 0 else f"color:{RED}" if v < 0 else "", subset=["Resultaat", "Resultaat %", "Score 20D"]),
+        sells_ = pos_df.index[pos_df["Advies"] == "VERKOPEN"].tolist()
+        if sells_:
+            sb1, sb2 = st.columns([3, 1])
+            with sb1:
+                st.markdown(f"<div class='banner' style='border-color:{RED};color:{RED};background:#1f0a10'>VERKOOPSIGNAAL voor {', '.join(sells_)} — "
+                            "zie de kolom Reden.</div>", unsafe_allow_html=True)
+            with sb2:
+                if st.button("Verkoop deze op papier", width="stretch"):
+                    ss["_pf_msg"] = " · ".join(pf_trade(pf, t_, "VERKOOP") for t_ in sells_)
+                    st.rerun()
+        pos_df = pos_df[["Naam", "Advies", "Reden", "Resultaat %", "Resultaat", "Waarde", "Gewicht %", "Score 20D", "Van top %", "Dagen", "Aantal", "Aankoop", "Koers"]]
+        adv_col = lambda v: f"color:{RED};font-weight:700" if v == "VERKOPEN" else f"color:{AMBER};font-weight:700" if v == "HERBEOORDELEN" else f"color:{GREEN};font-weight:700"
+        ev = st.dataframe(pos_df.style.map(lambda v: f"color:{GREEN}" if v > 0 else f"color:{RED}" if v < 0 else "", subset=["Resultaat", "Resultaat %", "Score 20D", "Van top %"])
+                          .map(adv_col, subset=["Advies"]),
                           width="stretch", on_select="rerun", selection_mode="single-row", key="pf_pos", column_config={
             "Aantal": st.column_config.NumberColumn(format="%.2f"), "Aankoop": st.column_config.NumberColumn(f"Aankoop ({B})", format="%.2f"),
             "Koers": st.column_config.NumberColumn(f"Koers ({B})", format="%.2f"), "Waarde": st.column_config.NumberColumn(f"Waarde ({B})", format="%.0f"),
             "Resultaat": st.column_config.NumberColumn(format="%+.0f"), "Resultaat %": st.column_config.NumberColumn(format="%+.2f%%"),
             "Gewicht %": st.column_config.ProgressColumn(min_value=0, max_value=100, format="%.0f%%"),
-            "Score 20D": st.column_config.NumberColumn(format="%+.0f", help="Huidige geldstroomscore; onder nul is een signaal om te herbeoordelen")})
+            "Score 20D": st.column_config.NumberColumn(format="%+.0f", help="Huidige geldstroomscore; onder nul is een signaal om te herbeoordelen"),
+            "Van top %": st.column_config.NumberColumn(format="%+.1f%%", help="Afstand tot de hoogste koers sinds aankoop (voor de meeschuivende stop)"),
+            "Dagen": st.column_config.NumberColumn(format="%d", help="Handelsdagen sinds de eerste aankoop"),
+            "Reden": st.column_config.TextColumn(width="large")})
         rows_ = ev.selection.rows if ev and ev.selection else []
         pk = pos_df.index[rows_[0]] if rows_ else None
         if pk != ss.get("_sel_pf_pos"):
             ss["_sel_pf_pos"] = pk
             if pk:
                 goto(pk); st.rerun()
-        weak_ = pos_df.index[pos_df["Score 20D"] < 0].tolist()
-        if weak_:
-            st.markdown(f"<div class='banner'>Herbeoordelen: de geldstroomscore is negatief geworden voor {', '.join(weak_)}.</div>", unsafe_allow_html=True)
+        st.markdown(f"<div class='note'><b>Advies</b> volgt vaste regels. VERKOPEN: verlies groter dan {pf.get('stop_pct', 10):.0f}% · koers meer dan "
+                    f"{pf.get('trail_pct', 15):.0f}% onder de top sinds aankoop · geldstroom negatief op 5 én 20 dagen · uitstroom over alle termijnen. "
+                    f"HERBEOORDELEN: 20-daagse geldstroom onder nul · instroom verzwakt · langer dan {pf.get('horizon_days', 60)} handelsdagen in bezit · "
+                    "model verwacht ondergemiddeld. Dit zijn regels om verlies te beperken en discipline te houden; dat ze koersen voorspellen is niet aangetoond. "
+                    "De grenzen pas je aan onder Instellingen.</div>", unsafe_allow_html=True)
     else:
         st.info("Nog geen posities. Plaats hierboven een order, of open de ANALIST en kies 'Koop deze selectie op papier'.")
 
@@ -1964,6 +2152,9 @@ elif view == "PORTEFEUILLE":
             nb = st.selectbox("Basisvaluta", ["EUR", "USD"], index=["EUR", "USD"].index(B))
             ns = st.number_input("Startkapitaal", 1000.0, 1e9, float(pf["start"]), 1000.0)
             nf = st.number_input("Transactiekosten %", 0.0, 5.0, float(pf["fee_pct"]), 0.05)
+            n_stop = st.number_input("Stop-loss: verkoopsignaal bij verlies van … %", 1.0, 90.0, float(pf.get("stop_pct", 10.0)), 1.0)
+            n_trail = st.number_input("Meeschuivende stop: … % onder de top sinds aankoop", 1.0, 90.0, float(pf.get("trail_pct", 15.0)), 1.0)
+            n_hor = st.number_input("Aanhoudperiode in handelsdagen (daarna herbeoordelen)", 1, 1000, int(pf.get("horizon_days", 60)), 5)
             sure = st.checkbox("Ja, wis alle posities en transacties en begin opnieuw")
             if st.form_submit_button("Opslaan / opnieuw beginnen", width="stretch"):
                 if sure:
@@ -1971,8 +2162,119 @@ elif view == "PORTEFEUILLE":
                     ss["_pf_msg"] = "Portefeuille opnieuw gestart."
                 else:
                     pf["fee_pct"] = nf
-                    ss["_pf_msg"] = "Kosten opgeslagen. Basisvaluta en startkapitaal wijzigen alleen bij opnieuw beginnen (vink het vakje aan)."
+                    ss["_pf_msg"] = "Instellingen opgeslagen. Basisvaluta en startkapitaal wijzigen alleen bij opnieuw beginnen (vink het vakje aan)."
+                pf["stop_pct"], pf["trail_pct"], pf["horizon_days"] = n_stop, n_trail, int(n_hor)
                 pf_save(pf)
+                st.rerun()
+
+elif view == "GEHEUGEN":
+    sec("Geheugen · wat de app op deze pc onthoudt")
+    cnt = mem_read("SELECT COUNT(DISTINCT date) AS dagen, MIN(date) AS eerste, MAX(date) AS laatste, COUNT(*) AS rijen FROM snapshots")
+    n_an = mem_read("SELECT COUNT(DISTINCT date) AS n FROM analyst_log")
+    size_mb = sum(f_.stat().st_size for f_ in CACHE_DIR.glob("*") if f_.is_file()) / 1e6 if CACHE_DIR.exists() else 0.0
+    dagen = int(cnt["dagen"].iloc[0]) if len(cnt) else 0
+    k_ = st.columns(5)
+    with k_[0]:
+        kpi("Dagen vastgelegd", f"{dagen}", f"{cnt['eerste'].iloc[0] or '—'} t/m {cnt['laatste'].iloc[0] or '—'}" if dagen else "nog niets")
+    with k_[1]:
+        kpi("Signaalregels", f"{int(cnt['rijen'].iloc[0]) if len(cnt) else 0:,}".replace(",", "."), "instrument × dag")
+    with k_[2]:
+        kpi("Analistadviezen", f"{int(n_an['n'].iloc[0]) if len(n_an) else 0}", "dagen met vastgelegde selectie")
+    with k_[3]:
+        pf_ = pf_load()
+        kpi("Portefeuille", f"{len(pf_['positions'])} posities", f"{len(pf_['trades'])} transacties")
+    with k_[4]:
+        kpi("Schijfruimte", f"{size_mb:,.0f} MB", "map cache")
+    st.markdown("<div class='note'>Elke dag dat je de app opent, legt hij de stand van dat moment vast: per instrument de scores, het signaal en de "
+                "modelverwachting, de selectie van de analist per regio, het oordeel over het model en de verkoopsignalen van je portefeuille. "
+                "Ook je instellingen (gewichten, vastgepinde instrumenten, termijn) en je portefeuille blijven bewaard. Koersen hoeven niet te worden "
+                "onthouden; die levert Yahoo altijd opnieuw. Dagen waarop de app niet geopend is, ontbreken in dit geheugen. "
+                "Demo-data wordt nooit vastgelegd.</div>", unsafe_allow_html=True)
+
+    sec("Trackrecord van de analist · hoe deden zijn eerdere selecties het sindsdien?")
+    al = mem_read("SELECT * FROM analyst_log ORDER BY date, scope, rank")
+    rows_ = []
+    Cc = P["Close"]
+    for (dt_, sc_), g_ in (al.groupby(["date", "scope"]) if len(al) else []):
+        after = Cc.index[Cc.index > pd.Timestamp(dt_)]
+        if len(after) < 2:
+            continue                                            # needs an entry close (next day) and at least one later close
+        ent = after[0]
+        tk = [t_ for t_ in g_["ticker"] if t_ in Cc.columns]
+        if not tk:
+            continue
+        ret = (Cc[tk].iloc[-1] / Cc.loc[ent, tk] - 1) * 100
+        w_ = g_.set_index("ticker")["weight"].reindex(tk)
+        scope_code = SCOPES.get(sc_)
+        uni_cols = [c for c in Cc.columns if c in META.index and (scope_code is None or (scope_code == "core" and META.loc[c, "core"]) or META.loc[c, "cls"] == scope_code)
+                    and META.loc[c, "cls"] not in ("Cash", "Futures & Vol")]
+        bench = float(((Cc[uni_cols].iloc[-1] / Cc.loc[ent, uni_cols] - 1) * 100).median())
+        mine = float((ret * w_).sum() / w_.sum())
+        rows_.append({"Datum advies": dt_, "Selectie": sc_, "Instrumenten": ", ".join(tk), "Handelsdagen": len(after) - 1, "Selectie %": mine,
+                      "Mediaan universum %": bench, "Verschil %": mine - bench, "Met model": "ja" if g_["with_model"].iloc[0] else "nee"})
+    if rows_:
+        tr_ = pd.DataFrame(rows_)
+        w1, w2, w3 = st.columns(3)
+        with w1:
+            kpi("Beoordeelde selecties", f"{len(tr_)}", "elk vanaf de slotkoers van de dag erna")
+        with w2:
+            kpi("Gemiddeld verschil", f"{tr_['Verschil %'].mean():+.2f}%", "selectie min mediaan van het universum", col(tr_["Verschil %"].mean() * 20))
+        with w3:
+            kpi("Beter dan universum", f"{(tr_['Verschil %'] > 0).mean() * 100:.0f}%", "van de selecties", col((tr_["Verschil %"] > 0).mean() * 100 - 50))
+        st.dataframe(tr_.sort_values("Datum advies", ascending=False).style.format({"Selectie %": "{:+.2f}", "Mediaan universum %": "{:+.2f}", "Verschil %": "{:+.2f}"})
+                     .map(lambda v: f"color:{GREEN}" if v > 0 else f"color:{RED}" if v < 0 else "", subset=["Selectie %", "Verschil %"]),
+                     width="stretch", hide_index=True, height=min(420, 38 * len(tr_) + 42))
+        st.markdown("<div class='note'>Selecties van opeenvolgende dagen overlappen sterk en zijn dus geen onafhankelijke waarnemingen. "
+                    "Rendement in lokale valuta, zonder kosten. Dit is de eerlijkste toets van de app: hij gebruikt alleen koersen van ná het advies.</div>",
+                    unsafe_allow_html=True)
+    else:
+        st.info("Nog geen selectie die oud genoeg is om te beoordelen. Een advies telt mee zodra er minstens twee handelsdagen aan koersen na de adviesdatum zijn. "
+                "Open de app regelmatig; het trackrecord bouwt zich vanzelf op.")
+
+    m1, m2 = st.columns(2)
+    with m1:
+        sec("Oordeel over het model door de tijd")
+        ml_hist = mem_read("SELECT date AS Datum, verdict AS Oordeel, horizon AS Horizon, hold_ic AS IC, hold_t AS t, hold_n AS Perioden, spread AS 'Top−bodem %' FROM model_log ORDER BY date DESC")
+        if len(ml_hist):
+            st.dataframe(ml_hist.style.format({"IC": "{:+.3f}", "t": "{:+.1f}", "Top−bodem %": "{:+.2f}"}), width="stretch", hide_index=True, height=240)
+        else:
+            st.caption("Wordt gevuld zodra het scherm VOORSPELLING of de ANALIST is geopend.")
+    with m2:
+        sec("Verkoop- en herbeoordeelsignalen van je portefeuille")
+        sl = mem_read("SELECT date AS Datum, ticker AS Ticker, advies AS Advies, reden AS Reden FROM sell_log ORDER BY date DESC, ticker")
+        if len(sl):
+            st.dataframe(sl, width="stretch", hide_index=True, height=240)
+        else:
+            st.caption("Nog geen signalen vastgelegd.")
+
+    sec("Vastgelegde geschiedenis van één instrument")
+    hist_t = mem_read("SELECT date, totaal, model, s5, s20, s60, signaal FROM snapshots WHERE ticker=? ORDER BY date", (ss.ticker,))
+    if len(hist_t) >= 2:
+        fig = go.Figure()
+        fig.add_trace(go.Scatter(x=hist_t["date"], y=hist_t["totaal"], name="Totaalscore", line=dict(color=CYAN, width=1.8)))
+        fig.add_trace(go.Scatter(x=hist_t["date"], y=hist_t["model"], name="Modelverwachting", line=dict(color=AMBER, width=1.4, dash="dot")))
+        lay(fig, 280, title=dict(text=f"{ss.ticker} · zoals vastgelegd op elke dag", font=dict(size=11, color=DIM)))
+        fig.update_layout(showlegend=True, legend=dict(orientation="h", y=-0.2, font=dict(size=10)))
+        fig.update_yaxes(range=[-100, 100])
+        show(fig)
+    else:
+        st.caption(f"Voor {ss.ticker} is nog minder dan twee dagen vastgelegd. Kies een ander instrument via het zoekveld of kom later terug.")
+
+    e1, e2, e3 = st.columns(3)
+    with e1:
+        if MEM_FILE.exists():
+            st.download_button("⬇ Geheugen downloaden (SQLite-bestand)", MEM_FILE.read_bytes(), "geheugen.db", width="stretch")
+    with e2:
+        snap_csv = mem_read("SELECT * FROM snapshots ORDER BY date, ticker")
+        if len(snap_csv):
+            st.download_button("⬇ Signaalhistorie als CSV", snap_csv.to_csv(index=False).encode(), "signaalhistorie.csv", "text/csv", width="stretch")
+    with e3:
+        with st.popover("Geheugen wissen", width="stretch"):
+            st.write("Wist de vastgelegde signalen, adviezen en oordelen. Je portefeuille en instellingen blijven staan.")
+            if st.button("Ja, wis de historie", type="primary"):
+                for tb in ("snapshots", "analyst_log", "model_log", "sell_log"):
+                    mem_write(f"DELETE FROM {tb}", [()])
+                ss.pop("_remembered", None)
                 st.rerun()
 
 elif view == "HANDLEIDING":
@@ -2324,6 +2626,17 @@ if bad:
         st.write(", ".join(bad))
 st.markdown("<div class='note' style='margin-top:10px'>Flows are price × volume proxies, not reported fund flows. Data: Yahoo Finance, FRED, CFTC. "
             "Not investment advice.</div>", unsafe_allow_html=True)
+
+# ── memory: persist settings when they change, and record today's state once ──
+try:
+    _cur = {"pins": ss.pins, "weights": dict(zip(COMP_COLS, wt)), "stocks": bool(ss.get("stocks", True)), "auto": bool(ss.get("auto", False)),
+            "tf": ss.get("tf", "20D"), "extra": list(ss.extra)}
+    if _cur != ss.get("_mem_saved"):
+        mem_write("INSERT OR REPLACE INTO settings VALUES (?,?)", [(k_, json.dumps(v_)) for k_, v_ in _cur.items()])
+        ss["_mem_saved"] = _cur
+    remember()
+except Exception:
+    pass
 
 # ── optional auto-refresh: a timer fragment that reruns the whole app ─────────
 ss["_last_run"] = time.time()
