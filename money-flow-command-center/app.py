@@ -26,6 +26,7 @@ from __future__ import annotations
 
 import io
 import json
+import os
 import sqlite3
 import time
 from contextlib import closing
@@ -397,6 +398,8 @@ def _download(tickers: tuple, period: str = "2y", interval: str = "1d"):
     import yfinance as yf
     frames, failed = {}, []
     tick = list(tickers)
+    if os.environ.get("MFCC_OFFLINE") == "1":      # test switch: behave as if Yahoo is unreachable
+        return None, tick
     try:  # fast reachability probe so an offline machine falls back in seconds, not minutes
         requests.get("https://query1.finance.yahoo.com", timeout=6, headers={"User-Agent": "Mozilla/5.0"})
     except Exception:
@@ -445,6 +448,31 @@ def fetch_live(tickers: tuple, period: str = "10y"):         # 10 years so the m
     return _download(tickers, period, "1d")
 
 
+@st.cache_data(ttl=900, show_spinner=False)
+def load_core(tickers: tuple, period: str = "10y"):
+    """Core universe with a safety net. A good download is saved to disk. If Yahoo is unreachable or returns
+    less than 80% of the instruments, the last good copy from disk is used instead (real but older prices),
+    so the app never silently swaps real markets for synthetic data.
+    Returns (panels or None, failed tickers, unix time of the data, stale flag)."""
+    f = CACHE_DIR / "core.pkl"
+    try:
+        P_, failed = _download(tickers, period, "1d")
+    except Exception:
+        P_, failed = None, list(tickers)
+    if P_ is not None and P_["Close"].shape[1] >= 0.8 * len(tickers):
+        try:
+            CACHE_DIR.mkdir(exist_ok=True)
+            pd.to_pickle({"panels": {k: v.astype("float32") for k, v in P_.items()}, "failed": failed}, f)
+        except Exception:
+            pass
+        return P_, failed, time.time(), False
+    try:
+        saved = pd.read_pickle(f)
+        return {k: v.astype(float) for k, v in saved["panels"].items()}, saved["failed"], f.stat().st_mtime, True
+    except Exception:
+        return None, list(tickers), time.time(), False
+
+
 @st.cache_data(ttl=6 * 3600, show_spinner=False)
 def load_stocks(tickers: tuple, period: str = "10y", max_age_h: float = 6.0):
     """Daily history for the extended stock universe. Stored on disk so it is downloaded at most once per
@@ -459,12 +487,13 @@ def load_stocks(tickers: tuple, period: str = "10y", max_age_h: float = 6.0):
     except Exception:
         pass
     P_, failed = _download(tickers, period, "1d")
-    if P_ is None:
-        try:                                  # offline: fall back to whatever is on disk, however old
+    if P_ is None or P_["Close"].shape[1] < 0.8 * len(tickers):
+        try:                                  # offline or throttled: keep the last good copy, however old
             saved = pd.read_pickle(f)
             return saved["panels"], saved["failed"], f.stat().st_mtime
         except Exception:
-            return None, list(tickers), None
+            if P_ is None:
+                return None, list(tickers), None
     P_ = {k: v.astype("float32") for k, v in P_.items()}
     try:
         CACHE_DIR.mkdir(exist_ok=True)
@@ -689,7 +718,7 @@ def flow_panels(P: dict, n: int, groups: pd.Series, classes: pd.Series) -> dict:
     vol_int = (np.tanh(ret / sig) * rvol / 1.5).clip(-1, 1)                # direction x relative volume
 
     # Yahoo reports crypto volume in USD already, so it must not be multiplied by the price again.
-    px_mult = tp.where(~np.array([str(c).endswith("-USD") for c in tp.columns])[None, :], 1.0)
+    px_mult = tp.where(np.broadcast_to(~np.array([str(c).endswith("-USD") for c in tp.columns]), tp.shape), 1.0)
     dollar = (mfm * px_mult * V).rolling(n).sum().where(has_vol)            # signed $ proxy  (EXTENSION POINT)
     gross = (px_mult * V).rolling(n).sum().where(has_vol)
 
@@ -1258,17 +1287,22 @@ with st.sidebar:
 tickers = tuple(list(META.index[META["core"]]) + [t for t in ss.extra if t not in META.index])   # core: refreshed every 15 min
 stock_tickers = tuple(META.index[~META["core"]])                                                  # stocks: disk-cached, 6 h
 demo, failed, P = (mode == "Demo"), [], None
+core_stale, core_asof = False, time.time()
 if not demo:
     with st.spinner("Fetching market data from Yahoo Finance…"):
         try:
-            P, failed = fetch_live(tickers)
+            P, failed, core_asof, core_stale = load_core(tickers)
         except Exception:
-            P = None
+            P, core_stale = None, False
     if P is None or P["Close"].shape[1] < 20:
         demo, P, failed = True, None, []
         st.markdown("<div class='banner'>⚠ LIVE DATA UNREACHABLE (Yahoo Finance did not respond) — showing SYNTHETIC DEMO DATA. "
                     "Numbers below are not real markets. Check your connection / <code>pip install -U yfinance</code> and press Refresh.</div>",
                     unsafe_allow_html=True)
+if not demo and core_stale:
+    st.markdown(f"<div class='banner'>⚠ YAHOO FINANCE NIET BEREIKBAAR — de app toont de laatst opgeslagen echte koersen van "
+                f"{datetime.fromtimestamp(core_asof):%d-%m-%Y %H:%M}. Signalen en portefeuille zijn dus niet actueel. "
+                "Druk op Refresh data om het opnieuw te proberen.</div>", unsafe_allow_html=True)
 if demo:
     if mode == "Demo":
         st.markdown("<div class='banner'>DEMO MODE — synthetic data, not real markets. Switch to Live in the sidebar.</div>", unsafe_allow_html=True)
@@ -1294,7 +1328,7 @@ stamp = mkstamp(P)
 # ── header + global controls ────────────────────────────────────────────────
 asof = P["Close"].index[-1].strftime("%Y-%m-%d")
 st.markdown(f"<div class='hdr'><div class='t'>◈ MONEY FLOW COMMAND CENTER</div><div class='s'>"
-            f"{'DEMO DATA' if demo else 'LIVE · YAHOO FINANCE'} · last bar {asof} · {P['Close'].shape[1]} instruments · "
+            f"{'DEMO DATA' if demo else 'OPGESLAGEN KOERSEN' if core_stale else 'LIVE · YAHOO FINANCE'} · last bar {asof} · {P['Close'].shape[1]} instruments · "
             f"rendered {datetime.now(timezone.utc):%H:%M:%S} UTC</div></div>", unsafe_allow_html=True)
 with st.expander("ⓘ  What do these “flows” represent? (read once)"):
     st.markdown("""
@@ -1501,7 +1535,7 @@ def pf_save(pf: dict):
 
 def pf_price(pf: dict, t: str):
     """Latest price of one share in the portfolio's base currency, or None. London quotes are in pence."""
-    if t not in P["Close"].columns:
+    if demo or t not in P["Close"].columns:       # never value or trade the portfolio on synthetic prices
         return None
     s_ = P["Close"][t].dropna()
     fx = fx_usd(demo)
@@ -1513,6 +1547,8 @@ def pf_price(pf: dict, t: str):
 
 def pf_trade(pf: dict, t: str, side: str, amount: float = None, qty: float = None) -> str:
     """Execute a simulated order at the latest price. Buys are sized by amount, sells by quantity."""
+    if demo:
+        return "Papierhandel is uitgeschakeld zolang er demo-data wordt getoond"
     px = pf_price(pf, t)
     if px is None or px <= 0:
         return f"{t}: geen koers of wisselkoers beschikbaar"
@@ -1588,6 +1624,11 @@ def pf_advice(pf: dict, pos_df: pd.DataFrame) -> pd.DataFrame:
     They limit losses and enforce discipline; they are not proven to predict prices."""
     if pos_df.empty:
         return pos_df
+    if demo:                                         # no advice on synthetic data
+        out = pos_df.copy()
+        out.insert(1, "Advies", "—")
+        out["Score 20D"], out["Reden"] = np.nan, "niet beschikbaar bij demo-data"
+        return out
     sg, ml_ = all_signals(), ml_today()
     stop, trail, hor = pf.get("stop_pct", 10.0), pf.get("trail_pct", 15.0), pf.get("horizon_days", 60)
     adv, why, s20 = [], [], []
@@ -1777,7 +1818,7 @@ Ook een aantoonbaar voorspellend model heeft een kleine statistische voorsprong 
 # ── portfolio watch: sell signals are checked on every run and shown on every screen ──
 try:
     _pf = pf_load()
-    if _pf["positions"]:
+    if _pf["positions"] and not demo:
         _adv = pf_advice(_pf, pf_value(_pf)[0])
         _flag = _adv[_adv["Advies"] != "HOUDEN"]
         if len(_flag):
@@ -2049,9 +2090,12 @@ elif view == "PORTEFEUILLE":
     pos_df, invested, total = pf_value(pf)
     pos_df = pf_advice(pf, pos_df)
     today = datetime.now().strftime("%Y-%m-%d")
-    if pf["positions"] or pf["trades"]:
+    if (pf["positions"] or pf["trades"]) and not demo:
         pf["history"][today] = round(total, 2)
         pf_save(pf)
+    if demo:
+        st.markdown("<div class='banner'>Er wordt demo-data getoond. De portefeuille is daarom alleen-lezen: posities staan op hun laatst bekende echte "
+                    "koers, orders en verkoopsignalen zijn uitgeschakeld.</div>", unsafe_allow_html=True)
     B = pf["base"]
     res = total - pf["start"]
     sec(f"Papieren portefeuille · gesimuleerd geld, echte koersen · bewaard op deze pc")
@@ -2073,16 +2117,19 @@ elif view == "PORTEFEUILLE":
     o1, o2 = st.columns([1, 1.6])
     with o1:
         sec("Order plaatsen · uitvoering tegen de laatste koers")
-        opts = list(snap.index)
-        with st.form("order", clear_on_submit=False):
-            tkr = st.selectbox("Instrument", opts, index=opts.index(ss.ticker) if ss.ticker in opts else 0,
-                               format_func=lambda t: f"{t} · {META.loc[t, 'name']}" if t in META.index and META.loc[t, 'name'] != t else t)
-            side = st.radio("Actie", ["KOOP", "VERKOOP"], horizontal=True)
-            amount = st.number_input(f"Bedrag in {B} (bij koop)", 0.0, 1e9, 5000.0, 500.0)
-            qty_s = st.number_input("Aantal stuks (bij verkoop; 0 = alles)", 0.0, 1e12, 0.0)
-            if st.form_submit_button("Order uitvoeren", width="stretch", type="primary"):
-                ss["_pf_msg"] = pf_trade(pf, tkr, side, amount=amount, qty=(qty_s or None))
-                st.rerun()
+        if demo:
+            st.info("Orders zijn uitgeschakeld zolang er demo-data wordt getoond.")
+        else:
+            opts = list(snap.index)
+            with st.form("order", clear_on_submit=False):
+                tkr = st.selectbox("Instrument", opts, index=opts.index(ss.ticker) if ss.ticker in opts else 0,
+                                   format_func=lambda t: f"{t} · {META.loc[t, 'name']}" if t in META.index and META.loc[t, 'name'] != t else t)
+                side = st.radio("Actie", ["KOOP", "VERKOOP"], horizontal=True)
+                amount = st.number_input(f"Bedrag in {B} (bij koop)", 0.0, 1e9, 5000.0, 500.0)
+                qty_s = st.number_input("Aantal stuks (bij verkoop; 0 = alles)", 0.0, 1e12, 0.0)
+                if st.form_submit_button("Order uitvoeren", width="stretch", type="primary"):
+                    ss["_pf_msg"] = pf_trade(pf, tkr, side, amount=amount, qty=(qty_s or None))
+                    st.rerun()
         px_ = pf_price(pf, ss.ticker)
         st.markdown(f"<div class='note'>Transactiekosten {pf['fee_pct']:.2f}% per order · koersen omgerekend naar {B} · fracties van aandelen toegestaan · "
                     "orders worden direct uitgevoerd tegen de laatste (mogelijk vertraagde) slotkoers, ook buiten beurstijden.</div>", unsafe_allow_html=True)
