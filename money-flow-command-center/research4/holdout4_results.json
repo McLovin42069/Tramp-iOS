@@ -1,0 +1,336 @@
+[
+ {
+  "file": "carry_1",
+  "name": "Always-on BTC spot/perp cash-and-carry (50/50 capital, 1x short)",
+  "data": "crypto",
+  "variants": 48,
+  "discovery": {
+   "t": 20.817025955122944,
+   "sharpe": 8.651497928726533,
+   "ann_return_pct": 4.857892466170171,
+   "alpha_t": null,
+   "max_drawdown_pct": -0.8353157814176004
+  },
+  "holdout": {
+   "days": 1034,
+   "active_days_pct": 100.0,
+   "ann_return_pct": 2.1725418295080448,
+   "ann_vol_pct": 0.1894186592161376,
+   "sharpe": 11.469523849965855,
+   "t": 23.23300510243852,
+   "max_drawdown_pct": -0.2967625636938531,
+   "positive_years": "3/3",
+   "alpha_ann_pct": null,
+   "alpha_t": null,
+   "bench_ann_pct": null,
+   "bench_sharpe": null,
+   "bench_max_drawdown_pct": null,
+   "by_year_pct": {
+    "2024": 5.75,
+    "2025": 2.3,
+    "2026": 1.05
+   },
+   "from": "2024-01-01",
+   "to": "2026-10-30"
+  },
+  "ho_worst_day_pct": -0.027434384563116126,
+  "full_t": 25.984018088744197,
+  "full_alpha_t": null
+ },
+ {
+  "file": "carry_2",
+  "name": "Always-on BTC+ETH spot/perp cash-and-carry (50/50 capital, 1x short)",
+  "data": "crypto",
+  "variants": 48,
+  "discovery": {
+   "t": 20.974157034733757,
+   "sharpe": 8.7168011671777,
+   "ann_return_pct": 5.422127985004814,
+   "alpha_t": null,
+   "max_drawdown_pct": -0.45114135767929664
+  },
+  "holdout": {
+   "days": 1034,
+   "active_days_pct": 100.0,
+   "ann_return_pct": 2.1290808217154202,
+   "ann_vol_pct": 0.19049878389207228,
+   "sharpe": 11.176348626570014,
+   "t": 22.63914074065994,
+   "max_drawdown_pct": -0.35783978683531226,
+   "positive_years": "3/3",
+   "alpha_ann_pct": null,
+   "alpha_t": null,
+   "bench_ann_pct": null,
+   "bench_sharpe": null,
+   "bench_max_drawdown_pct": null,
+   "by_year_pct": {
+    "2024": 5.99,
+    "2025": 2.14,
+    "2026": 0.8
+   },
+   "from": "2024-01-01",
+   "to": "2026-10-30"
+  },
+  "ho_worst_day_pct": -0.01785241864923823,
+  "full_t": 25.471693343355795,
+  "full_alpha_t": null
+ },
+ {
+  "file": "fed_1",
+  "name": "Month-end Treasury bid: hold TLT over the last trading day of each month",
+  "data": "long",
+  "variants": 232,
+  "discovery": {
+   "t": 3.4059651425463024,
+   "sharpe": 0.8409210680331254,
+   "ann_return_pct": 2.4275972950821525,
+   "alpha_t": 3.0016306932617103,
+   "max_drawdown_pct": -6.107495565560783
+  },
+  "holdout": {
+   "days": 1978,
+   "active_days_pct": 9.55510616784631,
+   "ann_return_pct": 0.12828637724486877,
+   "ann_vol_pct": 3.1719771916979473,
+   "sharpe": 0.04044366320811959,
+   "t": 0.11330872649049757,
+   "max_drawdown_pct": -7.726463981648779,
+   "positive_years": "3/8",
+   "alpha_ann_pct": 0.17369114475201,
+   "alpha_t": 0.15655397363679857,
+   "bench_ann_pct": -1.140829452252499,
+   "bench_sharpe": -0.07181337309039083,
+   "bench_max_drawdown_pct": -48.35111662868058,
+   "by_year_pct": {
+    "2019": 2.88,
+    "2020": -0.44,
+    "2021": 3.99,
+    "2022": -4.68,
+    "2023": 4.12,
+    "2024": -0.82,
+    "2025": -1.13,
+    "2026": -2.94
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "ho_worst_day_pct": -2.136204770472796,
+  "full_t": 2.7797369317310996,
+  "full_alpha_t": 2.5182602229539857
+ },
+ {
+  "file": "fed_2",
+  "name": "Month-end Treasury bid: hold TLT over the last two trading days of each month",
+  "data": "long",
+  "variants": 232,
+  "discovery": {
+   "t": 4.026211807876589,
+   "sharpe": 0.9940578343899287,
+   "ann_return_pct": 3.9453928775157174,
+   "alpha_t": 3.5253076307709166,
+   "max_drawdown_pct": -8.844908434134968
+  },
+  "holdout": {
+   "days": 1978,
+   "active_days_pct": 14.30738119312437,
+   "ann_return_pct": 1.6063312131944611,
+   "ann_vol_pct": 4.003199371208307,
+   "sharpe": 0.4012618568906333,
+   "t": 1.1241926766011137,
+   "max_drawdown_pct": -7.237068047414241,
+   "positive_years": "5/8",
+   "alpha_ann_pct": 1.6788520181375297,
+   "alpha_t": 1.2142150834490155,
+   "bench_ann_pct": -1.140829452252499,
+   "bench_sharpe": -0.07181337309039083,
+   "bench_max_drawdown_pct": -48.35111662868058,
+   "by_year_pct": {
+    "2019": 3.88,
+    "2020": -0.47,
+    "2021": 1.27,
+    "2022": -2.16,
+    "2023": 3.42,
+    "2024": 6.45,
+    "2025": 1.61,
+    "2026": -1.63
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "ho_worst_day_pct": -2.116204770472796,
+  "full_t": 3.9449745207684113,
+  "full_alpha_t": 3.668172733783027
+ },
+ {
+  "file": "liquid_1",
+  "name": "TLT long for 2 days after every Treasury coupon auction day (flat on auction days), else cash",
+  "data": "long",
+  "variants": 85,
+  "discovery": {
+   "t": 4.5456501590811325,
+   "sharpe": 1.1223053750402516,
+   "ann_return_pct": 6.92529202748158,
+   "alpha_t": 3.9723619175128158,
+   "max_drawdown_pct": -8.228384753409902
+  },
+  "holdout": {
+   "days": 1978,
+   "active_days_pct": 42.3154701718908,
+   "ann_return_pct": 1.2278411194127046,
+   "ann_vol_pct": 8.394965992601598,
+   "sharpe": 0.1462592130206113,
+   "t": 0.4097661747302042,
+   "max_drawdown_pct": -26.96032807943264,
+   "positive_years": "5/8",
+   "alpha_ann_pct": 1.5465653028697066,
+   "alpha_t": 0.6080581886521829,
+   "bench_ann_pct": -1.140829452252499,
+   "bench_sharpe": -0.07181337309039083,
+   "bench_max_drawdown_pct": -48.35111662868058,
+   "by_year_pct": {
+    "2019": 2.69,
+    "2020": 33.79,
+    "2021": 4.95,
+    "2022": -17.3,
+    "2023": 0.94,
+    "2024": 0.49,
+    "2025": -4.58,
+    "2026": -7.17
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "ho_worst_day_pct": -3.1378687554889817,
+  "full_t": 3.590468061171396,
+  "full_alpha_t": 3.2681315707506786
+ },
+ {
+  "file": "liquid_2",
+  "name": "TLT long for 2 days after 2/5/7-year note auction days (month-end supply cluster), else cash",
+  "data": "long",
+  "variants": 85,
+  "discovery": {
+   "t": 4.369437113951774,
+   "sharpe": 1.078798980843637,
+   "ann_return_pct": 4.87798956688104,
+   "alpha_t": 3.8600084298512725,
+   "max_drawdown_pct": -5.055934788841321
+  },
+  "holdout": {
+   "days": 1978,
+   "active_days_pct": 19.36299292214358,
+   "ann_return_pct": -0.7336583616170446,
+   "ann_vol_pct": 5.218755341248054,
+   "sharpe": -0.14058109906366903,
+   "t": -0.3938581236217211,
+   "max_drawdown_pct": -12.735236409014494,
+   "positive_years": "4/8",
+   "alpha_ann_pct": -0.6108122394684741,
+   "alpha_t": -0.34708488536752624,
+   "bench_ann_pct": -1.140829452252499,
+   "bench_sharpe": -0.07181337309039083,
+   "bench_max_drawdown_pct": -48.35111662868058,
+   "by_year_pct": {
+    "2019": -5.18,
+    "2020": 7.27,
+    "2021": 3.07,
+    "2022": -8.81,
+    "2023": 0.54,
+    "2024": 4.54,
+    "2025": -2.52,
+    "2026": -4.65
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "ho_worst_day_pct": -2.883448940869082,
+  "full_t": 3.1673419744088105,
+  "full_alpha_t": 2.8240418373065155
+ },
+ {
+  "file": "session_1",
+  "name": "Down-day overnight, 4 index futures proxy (1.0 bp)",
+  "data": "long",
+  "variants": 64,
+  "discovery": {
+   "t": 3.9855595968704676,
+   "sharpe": 0.7830680508427158,
+   "ann_return_pct": 5.654516152236999,
+   "alpha_t": 3.0858777528136745,
+   "max_drawdown_pct": -15.045567539648907
+  },
+  "holdout": {
+   "days": 1978,
+   "active_days_pct": 87.66430738119313,
+   "ann_return_pct": 3.8574821407755975,
+   "ann_vol_pct": 9.365255468674759,
+   "sharpe": 0.4118928900208053,
+   "t": 1.1539770415598307,
+   "max_drawdown_pct": -18.99958032635537,
+   "positive_years": "7/8",
+   "alpha_ann_pct": -0.6261947486926511,
+   "alpha_t": -0.22058952118671318,
+   "bench_ann_pct": 17.428787418249232,
+   "bench_sharpe": 0.9066553835563148,
+   "bench_max_drawdown_pct": -33.71726378600284,
+   "by_year_pct": {
+    "2019": 3.3,
+    "2020": 3.35,
+    "2021": 6.3,
+    "2022": -3.26,
+    "2023": 6.04,
+    "2024": 3.56,
+    "2025": 0.17,
+    "2026": 8.28
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "ho_worst_day_pct": -7.083602291968766,
+  "full_t": 3.9144849936848947,
+  "full_alpha_t": 2.5182182944220544
+ },
+ {
+  "file": "session_2",
+  "name": "Down-day overnight, S&P+Nasdaq futures proxy (0.5 bp)",
+  "data": "long",
+  "variants": 64,
+  "discovery": {
+   "t": 4.326076791139747,
+   "sharpe": 0.8499716133447673,
+   "ann_return_pct": 6.656752090706062,
+   "alpha_t": 3.489022188480949,
+   "max_drawdown_pct": -18.075526563582823
+  },
+  "holdout": {
+   "days": 1978,
+   "active_days_pct": 76.13751263902932,
+   "ann_return_pct": 4.96718470166006,
+   "ann_vol_pct": 9.717223438459042,
+   "sharpe": 0.5111732516102107,
+   "t": 1.4321252221369347,
+   "max_drawdown_pct": -19.432731084203226,
+   "positive_years": "6/8",
+   "alpha_ann_pct": 0.49138394173549915,
+   "alpha_t": 0.16448120656288823,
+   "bench_ann_pct": 17.428787418249232,
+   "bench_sharpe": 0.9066553835563148,
+   "bench_max_drawdown_pct": -33.71726378600284,
+   "by_year_pct": {
+    "2019": 3.18,
+    "2020": -0.31,
+    "2021": 6.88,
+    "2022": -0.36,
+    "2023": 7.52,
+    "2024": 8.43,
+    "2025": 4.68,
+    "2026": 6.44
+   },
+   "from": "2019-01-02",
+   "to": "2026-11-12"
+  },
+  "ho_worst_day_pct": -7.22971668433391,
+  "full_t": 4.38035690580595,
+  "full_alpha_t": 3.08937606647292
+ }
+]
