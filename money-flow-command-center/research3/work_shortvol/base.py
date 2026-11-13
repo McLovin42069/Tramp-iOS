@@ -16,3 +16,12 @@ def ev(sig, h, name, cost=5):
     yrs = a["by_year_pct"]; pos = sum(v>0 for v in yrs.values())
     print(f"{name:34s} h={h:2d} raw t={a['t']:+.2f} sp={a['spread_pct']:+.3f} net={a['net_spread_pct']:+.3f} | SN t={b['t']:+.2f} net={b['net_spread_pct']:+.3f} | halves {a['first_half_pct']:+.3f}/{a['second_half_pct']:+.3f} yrs+ {pos}/{len(yrs)} turn={a['turnover']:.2f} n={a['names_per_side']:.0f} neff={a['n_eff']}")
     return a,b
+# recompute on US sessions only (holiday rows have no short data)
+sess = S.index[S.notna().sum(axis=1) > 100]
+Ss, Ts = S.loc[sess], T.loc[sess]
+Cs, Vs = D["C"][cols].loc[sess], D["V"][cols].loc[sess]
+ret = Cs.pct_change(fill_method=None)
+def ratio(n=1):
+    return Ss.rolling(n, min_periods=max(1,n//2+1)).sum() / Ts.rolling(n, min_periods=max(1,n//2+1)).sum().replace(0,np.nan)
+def out(x): return x.reindex(ix)
+def z(x, n): return (x - x.rolling(n, min_periods=n//2).mean()) / x.rolling(n, min_periods=n//2).std()
