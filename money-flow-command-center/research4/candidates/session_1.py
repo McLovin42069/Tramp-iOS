@@ -1,6 +1,6 @@
 NAME = "Down-day overnight, 4 index futures proxy (1.0 bp)"
 RATIONALE = ("Overnight reversal premium in US equity-index futures: buy at the 16:00 cash close ONLY after a down day (close < previous close), sell at the next 09:30 cash open, flat during the day. 1993-2018 the night after a down day earned ~6-8 bp in SPY/QQQ/IWM/DIA (since 2005: ~6-7 bp) versus ~0.5-2 bp after an up day; liquidity providers who absorb end-of-day selling are paid overnight. ETF close->open is used as a PROXY for the futures contract and is costed at an ASSUMED 1.0 bp per trade (MES/MNQ/M2K/MYM micro futures, conservative). At the 2 bp ETF cost the rule is NOT significant (t ~2.1-2.4, alpha_t ~1.0-1.3): the edge exists only at futures costs. Needs a futures account (micro E-minis, margin; position opened at the cash close and closed at the cash open every signal day, ~115 round trips a year); carries overnight gap risk (worst night -5.8% to -6.6%). Weaker since 2010 (t ~1.9-2.4 alone).")
-VARIANTS_TRIED = 62
+VARIANTS_TRIED = 64
 DATA = "long"
 BENCH = "SPY"
 TICKERS = ['SPY', 'QQQ', 'IWM', 'DIA']
