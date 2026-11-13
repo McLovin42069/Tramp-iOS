@@ -82,7 +82,7 @@ def xs_eval(sig, D, h, cols=None, q=0.2, step=5, start=None, end=None, resid=Tru
     if len(sp) < 10:
         return {"n_eff": 0, "note": "too few dates"}
     ic = sr.where(ok).corrwith(rr.rank(axis=1, pct=True).where(ok), axis=1)[enough].dropna()
-    n_eff = max(len(sp) * step / (h + 1), 1.0)
+    n_eff = min(max(len(sp) * step / (h + 1), 1.0), len(sp))     # never credit more periods than observations (h < step)
     t = lambda x: float(x.mean() / (x.std(ddof=1) / np.sqrt(n_eff))) if x.std(ddof=1) > 0 else 0.0
     # turnover of the long and short books between consecutive NON-overlapping rebalances
     k = max(int(round((h + 1) / step)), 1)

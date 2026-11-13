@@ -1,0 +1,23 @@
+[
+ {
+  "file": "lead_asia_resmom_issuance",
+  "name": "Asia: country-residual momentum 12-1 + low net issuance (equal ranks), 60 days",
+  "kind": "xs",
+  "variants": 108,
+  "h": 60,
+  "disc_t": 2.07,
+  "disc_spread": 1.91,
+  "ho_t": 1.3159910494636426,
+  "ho_spread": 1.8560337914086151,
+  "ho_net": 1.6943454797203035,
+  "ho_n": 11,
+  "ho_hit": 64.23357664233576,
+  "ho_by_year": {
+   "2024": 1.57,
+   "2025": 2.41,
+   "2026": 1.43
+  },
+  "full_t": 2.610684154778496,
+  "turnover": 0.40422077922077915
+ }
+]

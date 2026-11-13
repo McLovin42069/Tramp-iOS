@@ -1262,6 +1262,21 @@ ML_CONFIGS = [(20, 3, 200), (60, 3, 200), (120, 3, 200)]     # (forecast horizon
 ML_MIN_PERIODS = 12    # a verdict of 'proven' needs at least this many unseen, non-overlapping test periods
 
 
+def ml_verdict(ml):
+    """One rule for the model's verdict, used everywhere. 'JA' needs ALL of: hold-out t > 2 with a positive spread,
+    at least ML_MIN_PERIODS unseen periods, and t > 2 over the whole walk-forward span as well. The last condition
+    stops a model that learned nothing during validation from being called proven on one favourable stretch."""
+    if not ml:
+        return "NEE", False
+    h_, a_ = ml["best"]["hold"], ml["best"].get("all") or ml["best"]["hold"]
+    sig = h_["ic_t"] > 2 and h_["spread"] > 0
+    if sig and h_["n"] >= ML_MIN_PERIODS and a_["ic_t"] > 2:
+        return "JA", True
+    if sig and a_["ic_t"] > 1.5:
+        return "VEELBELOVEND", False
+    return ("ZWAK", False) if h_["ic"] > 0 and h_["spread"] > 0 else ("NEE", False)
+
+
 def _z(x):
     sd = np.nanstd(x)
     return (x - np.nanmean(x)) / sd if sd > 0 else x * 0.0
@@ -1338,7 +1353,7 @@ def ml_forecast(P: dict, macro: pd.DataFrame, extra: dict = None, step: int = 5,
         (own return minus its sector), sector momentum, distance from the 250-day high, largest one-day gain
       · when the money moves: overnight versus intraday return (institutions and news act outside the session)
       · news days: direction of returns on abnormal-volume days (a price x volume proxy for earnings drift)
-      · character: volatility, illiquidity, seasonality (same period in the three previous years)
+      · seasonality (same period in the three previous years)
       · real flows, when available: short interest, net share issuance/buybacks, SPDR sector fund flows
     Market-wide inputs: cross-asset regime ratios, VIX, CFTC positioning, FRED, SPDR flows into stocks/cash/credit/duration.
     Target   : rank of the next-h-day return RELATIVE TO the instrument's own sector/region, scaled by volatility.
@@ -1349,7 +1364,7 @@ def ml_forecast(P: dict, macro: pd.DataFrame, extra: dict = None, step: int = 5,
     cols = [c for c in P["Close"].columns if c in META.index]
     P_ = {k: v[cols] for k, v in P.items()}
     C, O, V = P_["Close"], P_["Open"], P_["Volume"]
-    key = f"{C.index[-1].date()}|{len(cols)}|{len(C)}|{','.join(macro.columns)}|{','.join(extra)}|v6"
+    key = f"{C.index[-1].date()}|{len(cols)}|{len(C)}|{','.join(macro.columns)}|{','.join(extra)}|v7"
     try:
         saved = pd.read_pickle(CACHE_DIR / "model.pkl")
         if saved.get("key") == key:
@@ -1381,8 +1396,10 @@ def ml_forecast(P: dict, macro: pd.DataFrame, extra: dict = None, step: int = 5,
     hasv = np.broadcast_to((V.tail(250).sum() > 0).values, V.shape)
     relv = (V / V.rolling(60, min_periods=20).median().where(lambda x: x > 0)).where(hasv)
     feats["Nieuwsdag-richting · 60D"] = ((r1 / vol) * (relv - 2).clip(lower=0, upper=5)).rolling(60, min_periods=20).sum()
-    feats["Volatiliteit (60D)"] = np.log(vol.where(vol > 0) * np.sqrt(252))
-    feats["Illiquiditeit"] = np.log((r1.abs() / (C * V).where(lambda x: x > 0)).rolling(60, min_periods=20).mean().where(lambda x: x > 0))
+    # Volatility and illiquidity are deliberately NOT inputs. The stock list holds today's large companies only, so
+    # anything that proxies "was small, thinly traded or volatile in the past" looks predictive purely because the
+    # small names that are in the list are the ones that grew (survivorship). An edge-search agent measured this:
+    # illiquidity alone gave t = 5 on this universe, an artefact that cannot be traded.
     feats["Seizoen · zelfde periode vorige 3 jaar"] = sum(C.shift(k - 20) / C.shift(k) - 1 for k in (250, 500, 750)) / 3
     for k, v in extra.items():
         feats[k] = v.reindex(index=C.index, columns=cols)
@@ -2064,7 +2081,7 @@ def analyst_select(scope, n_pick: int, ml):
     """Shared selection logic of the analyst (used by the popup and by the daily memory log)."""
     d = all_signals()
     d = d[d.index.isin(META.index)].copy()
-    proven = bool(ml and ml["best"]["hold"]["ic_t"] > 2 and ml["best"]["hold"]["spread"] > 0 and ml["best"]["hold"]["n"] >= ML_MIN_PERIODS)
+    proven = ml_verdict(ml)[1]
     d["Model"] = ml["forecast"].reindex(d.index) if ml else np.nan
     d["Vol %"] = P["Close"][d.index].pct_change(fill_method=None).tail(60).std() * np.sqrt(252) * 100
     w_m = 0.6 if proven else 0.3                                   # lean on the model only when it has earned it
@@ -2103,8 +2120,7 @@ def remember():
                   [(bar, lab, i, t, float(r["Kans"]), float(wgt[t]), f(r["Last"]), int(ml_ is not None)) for i, (t, r) in enumerate(picks.iterrows(), 1)])
     if ml_:
         b_, h_ = ml_["best"], ml_["best"]["hold"]
-        sig_ok = h_["ic_t"] > 2 and h_["spread"] > 0
-        verdict = "JA" if sig_ok and h_["n"] >= ML_MIN_PERIODS else "VEELBELOVEND" if sig_ok else "ZWAK" if h_["ic"] > 0 and h_["spread"] > 0 else "NEE"
+        verdict = ml_verdict(ml_)[0]
         mem_write("INSERT OR REPLACE INTO model_log VALUES (?,?,?,?,?,?,?,?,?)",
                   [(bar, b_["h"], b_["depth"], b_["val"]["ic_t"], h_["ic"], h_["ic_t"], h_["n"], h_["spread"], verdict)])
     ss["_remembered"] = flag
@@ -2413,13 +2429,12 @@ elif view == "VOORSPELLING":
         sec("Zelflerend model · leert uit het verleden welke patronen aan koersstijgingen voorafgingen")
         bst, hd, vl = ml["best"], ml["best"]["hold"], ml["best"]["val"]
         H = bst["h"]
-        sig_ = hd["ic_t"] > 2 and hd["spread"] > 0
-        good = sig_ and hd["n"] >= ML_MIN_PERIODS
-        weak = hd["ic"] > 0 and hd["spread"] > 0
-        v_txt, v_col = (("JA — AANTOONBAAR", GREEN) if good else ("VEELBELOVEND", CYAN) if sig_ else ("ZWAK", AMBER) if weak else ("NEE", RED))
+        vd_, good = ml_verdict(ml)
+        sig_ = vd_ == "VEELBELOVEND"
+        v_txt, v_col = {"JA": ("JA — AANTOONBAAR", GREEN), "VEELBELOVEND": ("VEELBELOVEND", CYAN), "ZWAK": ("ZWAK", AMBER), "NEE": ("NEE", RED)}[vd_]
         k_ = st.columns(5)
         with k_[0]:
-            kpi("Voorspellend? · eindtoets", v_txt, f"{hd['n']} ongeziene perioden van {H}D" + ("" if good or not sig_ else f" · {ML_MIN_PERIODS} nodig"), v_col)
+            kpi("Voorspellend? · eindtoets", v_txt, f"{hd['n']} ongeziene perioden van {H}D · hele periode t = {bst['all']['ic_t']:+.1f}", v_col)
         with k_[1]:
             kpi("Rangcorrelatie (IC)", f"{hd['ic']:+.3f}", f"t = {hd['ic_t']:+.1f} · overtuigend vanaf 2", col(hd["ic"] * 1000))
         with k_[2]:
@@ -2546,7 +2561,8 @@ elif view == "VOORSPELLING":
                     "<b>Doel.</b> Het model voorspelt het rendement <i>ten opzichte van de eigen sector of regio</i>, gecorrigeerd voor beweeglijkheid. "
                     "Het hoeft dus niet te raden of de markt, de sector of de valuta stijgt.<br>"
                     "<b>Zelf-afstelling.</b> Het model probeert elke instelling in de tabel uit en kiest de beste op de <i>validatieperiode</i>. "
-                    "Het oordeel bovenaan komt uitsluitend uit de <i>eindtoets</i>: een latere periode die bij het kiezen niet is gebruikt. "
+                    "Het oordeel bovenaan komt uit de <i>eindtoets</i>: een latere periode die bij het kiezen niet is gebruikt. Voor een JA moet het model "
+                    "bovendien over de héle testperiode overtuigen; een model dat tijdens het afstellen niets leerde, telt niet als bewezen op één gunstig stuk. "
                     "Dat is bewust. Een model dat mag blijven sleutelen tot dezelfde testdata er goed uitziet, vindt altijd iets dat overtuigend lijkt, "
                     "ook in puur toeval, en faalt daarna met echt geld. Blijft het oordeel zwak, dan is dat de eerlijke uitkomst voor deze data.<br>"
                     "Het model traint en stelt zichzelf opnieuw af zodra er een nieuwe handelsdag aan data is; het resultaat wordt op schijf bewaard.<br>"
@@ -2721,7 +2737,8 @@ elif view == "ECHTE STROMEN":
         st.markdown("<div class='note'>Dit zijn geen afgeleide maar gemeten stromen. Een ETF geeft nieuwe aandelen uit als er netto geld binnenkomt en "
                     "trekt ze in als er geld uitgaat; State Street publiceert het aantal uitstaande aandelen per dag. Stroom = verandering in aantal × "
                     "intrinsieke waarde, als percentage van het fondsvermogen aan het begin van de periode. De cijfers lopen één handelsdag achter. "
-                    "Ze dekken alleen SPDR-fondsen; andere fondshuizen stellen deze historie niet vrij beschikbaar.</div>", unsafe_allow_html=True)
+                    "Ze dekken alleen SPDR-fondsen; andere fondshuizen stellen deze historie niet vrij beschikbaar. <b>Let op:</b> bij XRT, XOP, KRE, XBI, XHB en XSD "
+                    "zijn grote sprongen meestal geen beleggersvraag: daar worden fondsaandelen aangemaakt om uit te lenen aan short-verkopers.</div>", unsafe_allow_html=True)
         f1, f2 = st.columns([1, 1.5])
         with f1:
             by_b = tab.groupby("Soort")["20D $ mln"].sum() / 1e3
