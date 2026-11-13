@@ -25,14 +25,16 @@ C = P["Close"][us]
 idx = C.index
 valid = C.notna() & S[60].notna() & (C.notna().cumsum() > 130)
 
-periods = sorted(p for p in H["period"].unique() if pd.Timestamp(p).is_quarter_end)
-npos = H.groupby(["period", "cik"])["ticker"].nunique()
+H = H[(H["period"] >= "2015-12-31") & H["ticker"].isin(us)]
+cnt = H.groupby("period")["cik"].nunique()
+periods = sorted(p for p in cnt.index[cnt > 2000] if pd.Timestamp(p).is_quarter_end)
+BYP = {p: g.pivot_table(index="cik", columns="ticker", values="shares", aggfunc="sum") for p, g in H[H["period"].isin(periods)].groupby("period")}
+print("kwartalen", len(periods), flush=True)
 sig = {"breedte: nieuwe houders min vertrekkers": {}, "aandeel fondsen dat bijkocht min afbouwde": {}, "geconcentreerde fondsen (10-60 posities): bijkopers min afbouwers": {}}
 for p0, p1 in zip(periods[:-1], periods[1:]):
     if (pd.Timestamp(p1) - pd.Timestamp(p0)).days > 100:
         continue
-    a = H[H["period"] == p0].pivot_table(index="cik", columns="ticker", values="shares", aggfunc="sum")
-    b = H[H["period"] == p1].pivot_table(index="cik", columns="ticker", values="shares", aggfunc="sum")
+    a, b = BYP[p0], BYP[p1]
     both = a.index.intersection(b.index)
     if len(both) < 500:
         continue
@@ -43,7 +45,7 @@ for p0, p1 in zip(periods[:-1], periods[1:]):
     n_prev = (a > 0).sum().where(lambda x: x >= 50)
     breadth = (((b > 0) & (a == 0)).sum() - ((a > 0) & (b == 0)).sum()) / n_prev
     inc = (((b > a * 1.02) & (a >= 0)).sum() - (b < a * 0.98).sum()) / n_prev
-    conc = both[npos.reindex([(p1, c) for c in both]).between(10, 60).values]
+    conc = both[(b > 0).sum(axis=1).between(10, 60).values]
     ac, bc = a.loc[conc], b.loc[conc]
     nc = ((ac > 0) | (bc > 0)).sum().where(lambda x: x >= 15)
     cinc = ((bc > ac * 1.02).sum() - (bc < ac * 0.98).sum()) / nc
