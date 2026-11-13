@@ -9,8 +9,12 @@ us = [t for t in META.index if META.at[t, "cls"] == "US Stocks"]
 STOP = r"\b(INC|CORP|CORPORATION|CO|COMPANY|COM|NEW|LTD|PLC|CL|CLASS|A|B|C|THE|HOLDINGS|HLDGS|HLDG|GROUP|GRP|DEL|N V|NV|SA|S A|COS|COMPANIES|LP|ORD|SHS|CAP STK|COMMON|STOCK|INCORPORATED|LIMITED|TR|TRUST|&|AND)\b"
 norm = lambda s: re.sub(r"\s+", " ", re.sub(STOP, " ", re.sub(r"[^A-Z0-9& ]", " ", str(s).upper().replace("-", " ")))).strip()
 
+def member(z, name):
+    return z.open(next(n for n in z.namelist() if n.upper().endswith(name.upper())))
+
+
 def load(z):
-    it = pd.read_csv(z.open("INFOTABLE.tsv"), sep="\t", low_memory=False, usecols=["ACCESSION_NUMBER", "NAMEOFISSUER", "CUSIP", "SSHPRNAMT", "SSHPRNAMTTYPE", "PUTCALL"])
+    it = pd.read_csv(member(z, "INFOTABLE.tsv"), sep="\t", low_memory=False, usecols=["ACCESSION_NUMBER", "NAMEOFISSUER", "CUSIP", "SSHPRNAMT", "SSHPRNAMTTYPE", "PUTCALL"])
     it = it[it["PUTCALL"].isna() & (it["SSHPRNAMTTYPE"] == "SH")]
     it["CUSIP"] = it["CUSIP"].astype(str).str.upper().str.strip()
     return it
@@ -58,7 +62,7 @@ for l in links:                                    # newest first: the map is bu
     if CM is None:
         print("too small for map, skipped", l, flush=True); continue
     it = it[it["CUSIP"].isin(CM)]
-    sub = pd.read_csv(z.open("SUBMISSION.tsv"), sep="\t", low_memory=False)
+    sub = pd.read_csv(member(z, "SUBMISSION.tsv"), sep="\t", low_memory=False)
     sub = sub[sub["SUBMISSIONTYPE"] == "13F-HR"]
     d = it.merge(sub[["ACCESSION_NUMBER", "FILING_DATE", "CIK", "PERIODOFREPORT"]], on="ACCESSION_NUMBER")
     d["ticker"] = d["CUSIP"].map(CM)
