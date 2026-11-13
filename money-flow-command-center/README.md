@@ -106,3 +106,15 @@ To update an existing install, run `install-money-flow.sh` again.
   including the analyst's forward track record.
 - **Sell signals** (PORTEFEUILLE): rule-based advice per position (stop-loss, trailing stop, flow turning negative,
   holding period, model), shown on every screen when triggered. Thresholds are portfolio settings.
+
+## Real flow data, quant score and rotation test
+
+- **Sources** (all free, cached in `cache/`): SPDR daily shares outstanding (State Street navhist files, 55 funds),
+  FINRA twice-monthly short interest (downloaded once, ~450 MB, kept as a small table), Yahoo historical share counts
+  (net issuance/buybacks). iShares and SEC EDGAR block automated access and are not used.
+- **ECHTE STROMEN** view: measured fund flows by fund and bucket, a rotation test of flow versus forward return,
+  and a short-interest board.
+- **Model**: 54 inputs ranked within asset class, ensemble of two gradient-boosting models and a ridge regression,
+  horizons 20/60/120 days, averages over all test dates with t-statistics on non-overlapping periods only.
+- **Kwantscore**: equal-weight composite of eight published anomalies (`QUANT_FACTORS`) with literature signs and no
+  fitting, tested on the full history, by half-period and by region.

@@ -503,6 +503,235 @@ def load_stocks(tickers: tuple, period: str = "10y", max_age_h: float = 6.0):
     return P_, failed, time.time()
 
 
+# ── Real money-flow data (beyond price x volume) ─────────────────────────────
+# SPDR funds publish daily shares outstanding since inception: creations/redemptions are literal fund flows.
+SPDR_FUNDS = {
+    "XLK": ("Technology", "Sector"), "XLC": ("Communication", "Sector"), "XLY": ("Cons. Discretionary", "Sector"),
+    "XLP": ("Cons. Staples", "Sector"), "XLF": ("Financials", "Sector"), "XLV": ("Health Care", "Sector"), "XLE": ("Energy", "Sector"),
+    "XLI": ("Industrials", "Sector"), "XLB": ("Materials", "Sector"), "XLU": ("Utilities", "Sector"), "XLRE": ("Real Estate", "Sector"),
+    "XBI": ("Biotech", "Industry"), "XOP": ("Oil & Gas E&P", "Industry"), "XME": ("Metals & Mining", "Industry"), "XHB": ("Homebuilders", "Industry"),
+    "XRT": ("Retail", "Industry"), "KRE": ("Regional Banks", "Industry"), "KBE": ("Banks", "Industry"), "XSD": ("Semiconductors", "Industry"),
+    "XAR": ("Aerospace & Defense", "Industry"), "KIE": ("Insurance", "Industry"), "XES": ("Oil Services", "Industry"), "XPH": ("Pharma", "Industry"),
+    "XSW": ("Software", "Industry"), "XTN": ("Transportation", "Industry"),
+    "SPY": ("S&P 500", "Broad & Style"), "DIA": ("Dow 30", "Broad & Style"), "MDY": ("MidCap 400", "Broad & Style"), "SPYG": ("S&P Growth", "Broad & Style"),
+    "SPYV": ("S&P Value", "Broad & Style"), "SPMD": ("Mid Cap", "Broad & Style"), "SPSM": ("Small Cap", "Broad & Style"),
+    "SPYD": ("High Dividend", "Broad & Style"), "SDY": ("Dividend", "Broad & Style"), "RWR": ("US REITs", "Broad & Style"),
+    "SPDW": ("Developed ex-US", "Region"), "SPEM": ("Emerging Markets", "Region"), "FEZ": ("Euro Stoxx 50", "Region"), "GXC": ("China", "Region"),
+    "SPEU": ("Europe", "Region"), "GNR": ("Natural Resources", "Region"),
+    "BIL": ("T-Bills", "Bonds"), "SPTS": ("Short Treasury", "Bonds"), "SPTI": ("Interm. Treasury", "Bonds"), "SPTL": ("Long Treasury", "Bonds"),
+    "SPIP": ("TIPS", "Bonds"), "SPAB": ("Aggregate", "Bonds"), "SPIB": ("Interm. Corporate", "Bonds"), "SPSB": ("Short Corporate", "Bonds"),
+    "SPLB": ("Long Corporate", "Bonds"), "JNK": ("High Yield", "Bonds"), "SJNK": ("Short High Yield", "Bonds"), "BWX": ("Intl Treasury", "Bonds"),
+    "CWB": ("Convertibles", "Bonds"), "SPMB": ("Mortgage-Backed", "Bonds"),
+}
+SECTOR_ETF = {"Technology": "XLK", "Communication": "XLC", "Cons. Discretionary": "XLY", "Cons. Staples": "XLP", "Financials": "XLF",
+              "Health Care": "XLV", "Energy": "XLE", "Energy Equities": "XLE", "Industrials": "XLI", "Materials": "XLB", "Utilities": "XLU",
+              "Real Estate": "XLRE"}
+_BROWSER_UA = {"User-Agent": "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36"}
+
+
+def _disk(name: str, max_age_h: float):
+    """Return a pickled object from the cache folder if it is younger than max_age_h, else None."""
+    f = CACHE_DIR / name
+    try:
+        if f.exists() and time.time() - f.stat().st_mtime < max_age_h * 3600:
+            return pd.read_pickle(f)
+    except Exception:
+        pass
+    return None
+
+
+def _disk_save(name: str, obj):
+    try:
+        CACHE_DIR.mkdir(exist_ok=True)
+        pd.to_pickle(obj, CACHE_DIR / name)
+    except Exception:
+        pass
+
+
+@st.cache_data(ttl=6 * 3600, show_spinner=False)
+def load_spdr(max_age_h: float = 20.0):
+    """Daily NAV, shares outstanding and net assets of every SPDR fund (State Street 'navhist' files), plus
+    total-return prices from Yahoo. Returns dict(so, nav, tna, close) of [date x fund] frames, or None."""
+    got = _disk("spdr.pkl", max_age_h)
+    if got is not None:
+        return got
+    if os.environ.get("MFCC_OFFLINE") == "1":
+        return _disk("spdr.pkl", 1e9)
+    so, nav, tna = {}, {}, {}
+    for t in SPDR_FUNDS:
+        try:
+            r = requests.get(f"https://www.ssga.com/library-content/products/fund-data/etfs/us/navhist-us-en-{t.lower()}.xlsx",
+                             timeout=30, headers=_BROWSER_UA)
+            r.raise_for_status()
+            x = pd.read_excel(io.BytesIO(r.content), header=None, engine="openpyxl")
+            h0 = x.index[x[0].astype(str).str.strip() == "Date"][0]
+            d = x.iloc[h0 + 1:, :4].copy()
+            d.columns = ["date", "nav", "so", "tna"]
+            d["date"] = pd.to_datetime(d["date"], format="%d-%b-%Y", errors="coerce")
+            d = d.dropna(subset=["date"]).set_index("date").apply(pd.to_numeric, errors="coerce").sort_index()
+            if len(d) > 300:
+                so[t], nav[t], tna[t] = d["so"], d["nav"], d["tna"]
+        except Exception:
+            continue
+    if len(so) < 10:
+        return _disk("spdr.pkl", 1e9)                 # keep an old copy rather than nothing
+    out = {"so": pd.DataFrame(so), "nav": pd.DataFrame(nav), "tna": pd.DataFrame(tna)}
+    try:
+        px, _ = _download(tuple(so), "10y", "1d")
+        out["close"] = px["Close"] if px is not None else out["nav"]
+    except Exception:
+        out["close"] = out["nav"]
+    _disk_save("spdr.pkl", out)
+    return out
+
+
+def spdr_flow_pct(sp: dict, n: int) -> pd.DataFrame:
+    """Net creations minus redemptions over n days as % of the fund's assets at the start of the window.
+    Shifted one day: shares outstanding for day t are only public the next morning."""
+    flow = sp["so"].diff() * sp["nav"]
+    return (100 * flow.rolling(n, min_periods=max(2, n // 2)).sum() / sp["tna"].shift(n)).shift(1)
+
+
+def _si_candidates(start: str = "2018-01-01"):
+    """FINRA short-interest settlement dates: mid-month and month-end, moved back when not a business day."""
+    out = []
+    for m in pd.period_range(start, pd.Timestamp.today(), freq="M"):
+        mid = [pd.Timestamp(m.year, m.month, d) for d in (15, 14, 13, 12)]
+        end = list(pd.bdate_range(m.start_time, m.end_time)[::-1][:4])
+        out.append((f"{m}-A", [d for d in mid if d.dayofweek < 5]))
+        out.append((f"{m}-B", end))
+    return out
+
+
+@st.cache_data(ttl=12 * 3600, show_spinner=False)
+def load_short_interest(symbols: tuple):
+    """Twice-monthly short interest per US-listed stock and ETF (FINRA, free). Downloaded once and kept on
+    disk; later runs only fetch new reports. Returns a long frame (date, symbol, si, adv, dtc) or None."""
+    saved = _disk("short.pkl", 1e9) or {"rows": [], "done": {}}
+    if os.environ.get("MFCC_OFFLINE") == "1":
+        return pd.DataFrame(saved["rows"], columns=["date", "symbol", "si", "adv", "dtc"]) if saved["rows"] else None
+    want = {t.replace("-", ""): t for t in symbols}
+    today, changed = pd.Timestamp.today().normalize(), 0
+    for key, cands in _si_candidates():
+        if key in saved["done"]:
+            continue
+        cands = [d for d in cands if d <= today]
+        if not cands:
+            continue
+        hit = None
+        for d in cands:
+            try:
+                r = requests.get(f"https://cdn.finra.org/equity/otcmarket/biweekly/shrt{d:%Y%m%d}.csv", timeout=40, headers=_BROWSER_UA)
+            except Exception:
+                break                                  # network trouble: try again next time
+            if r.status_code == 200 and len(r.content) > 10_000:
+                hit = (d, r.content)
+                break
+        if hit is None:
+            if cands[0] < today - pd.Timedelta(days=45):
+                saved["done"][key] = None              # old and missing: stop asking
+            continue
+        d, content = hit
+        try:
+            x = pd.read_csv(io.BytesIO(content), sep="|", dtype=str, usecols=["symbolCode", "currentShortPositionQuantity",
+                                                                             "averageDailyVolumeQuantity", "daysToCoverQuantity"])
+            x = x[x["symbolCode"].isin(want)]
+            for sym, si, adv, dtc in x.itertuples(index=False):
+                saved["rows"].append((d, want[sym], float(si or 0), float(adv or 0), float(dtc or 0)))
+            saved["done"][key] = str(d.date())
+            changed += 1
+            if changed % 25 == 0:
+                _disk_save("short.pkl", saved)         # resumable
+        except Exception:
+            continue
+    if changed:
+        _disk_save("short.pkl", saved)
+    return pd.DataFrame(saved["rows"], columns=["date", "symbol", "si", "adv", "dtc"]) if saved["rows"] else None
+
+
+@st.cache_data(ttl=24 * 3600, show_spinner=False)
+def load_shares(tickers: tuple, max_age_h: float = 7 * 24):
+    """Cumulative net share issuance per company (log shares outstanding, Yahoo). Buybacks lower it, new
+    issuance raises it. Jumps above 40% between two reports are treated as stock splits and removed."""
+    got = _disk("shares.pkl", max_age_h)
+    if got is not None and len(got) >= 0.5 * len(tickers):
+        return got
+    if os.environ.get("MFCC_OFFLINE") == "1":
+        return _disk("shares.pkl", 1e9)
+    import yfinance as yf
+    out, miss = {}, 0
+    for t in tickers:
+        try:
+            s_ = yf.Ticker(t).get_shares_full(start="2014-01-01")
+            if s_ is None or len(s_) < 8:
+                continue
+            s_ = s_[~s_.index.duplicated(keep="last")].astype(float)
+            s_.index = pd.to_datetime(s_.index).tz_localize(None).normalize()
+            d = np.log(s_.where(s_ > 0)).diff()
+            d[d.abs() > np.log(1.4)] = 0.0
+            out[t] = d.cumsum().groupby(level=0).last()
+            miss = 0
+        except Exception:
+            miss += 1
+            if miss > 25:                               # throttled: stop hammering, keep what we have
+                break
+    if len(out) < 0.3 * len(tickers):
+        return _disk("shares.pkl", 1e9)
+    _disk_save("shares.pkl", out)
+    return out
+
+
+def source_features(P: dict, cols: list):
+    """Turn the real-flow sources into [date x ticker] model inputs and market-wide inputs.
+    Every series is lagged by its publication delay. Missing sources simply leave gaps."""
+    idx, feats, macro, status = P["Close"].index, {}, {}, {}
+    us = [c for c in cols if "." not in c and "=" not in c and "^" not in c and not c.endswith("-USD")]
+    # 1. short interest (FINRA) -------------------------------------------------
+    try:
+        si = load_short_interest(tuple(us))
+        if si is not None and len(si):
+            lagged = si.assign(date=si["date"] + pd.offsets.BDay(12))          # published ~8-10 business days after settlement
+            dtc = lagged.pivot_table(index="date", columns="symbol", values="dtc", aggfunc="last").sort_index()
+            sq = lagged.pivot_table(index="date", columns="symbol", values="si", aggfunc="last").sort_index()
+            feats["Short · dagen tot dekking"] = np.log1p(dtc.clip(lower=0, upper=200)).reindex(idx, method="ffill", limit=30).reindex(columns=cols)
+            feats["Short · verandering positie"] = (sq / sq.shift(1) - 1).clip(-1, 3).reindex(idx, method="ffill", limit=30).reindex(columns=cols)
+            status["Short-posities (FINRA)"] = f"{si['date'].nunique()} rapporten t/m {si['date'].max():%d-%m-%Y} · {si['symbol'].nunique()} instrumenten"
+    except Exception:
+        pass
+    # 2. net share issuance (Yahoo) ---------------------------------------------
+    try:
+        stocks_ = [c for c in cols if c in META.index and not META.loc[c, "core"]]
+        sh = load_shares(tuple(stocks_))
+        if sh:
+            cum = pd.DataFrame(sh)
+            cum = cum.set_axis(cum.index + pd.Timedelta(days=5)).reindex(idx.union(cum.index + pd.Timedelta(days=5))).ffill().reindex(idx)
+            feats["Netto-uitgifte aandelen · 250D"] = (cum - cum.shift(250)).reindex(columns=cols)
+            status["Inkoop/uitgifte aandelen (Yahoo)"] = f"{len(sh)} bedrijven"
+    except Exception:
+        pass
+    # 3. SPDR fund flows ----------------------------------------------------------
+    try:
+        sp = load_spdr()
+        if sp is not None:
+            grp = META["group"].reindex(cols)
+            for n in (20, 60):
+                fl = spdr_flow_pct(sp, n).reindex(idx, method="ffill", limit=5)
+                pan = pd.DataFrame(np.nan, index=idx, columns=cols)
+                for c in cols:
+                    etf = c if c in fl.columns else SECTOR_ETF.get(grp.get(c)) if c in us and not META.loc[c, "core"] else None
+                    if etf in fl.columns:
+                        pan[c] = fl[etf]
+                feats[f"Echte fondsstroom sector/ETF · {n}D"] = pan
+            f20 = spdr_flow_pct(sp, 20).reindex(idx, method="ffill", limit=5)
+            for t, lab in (("SPY", "S&P 500"), ("BIL", "kasgeld"), ("JNK", "high yield"), ("SPTL", "lange obligaties")):
+                if t in f20.columns:
+                    macro[f"Macro · fondsstroom {lab} 20D"] = f20[t]
+            status["Fondsstromen (SPDR)"] = f"{sp['so'].shape[1]} fondsen t/m {sp['so'].index[-1]:%d-%m-%Y}"
+    except Exception:
+        pass
+    return feats, pd.DataFrame(macro, index=idx), status
+
+
 @st.cache_data(ttl=240, show_spinner=False)
 def fetch_bars(tickers: tuple):
     """15-minute bars for the whole universe (last month), aligned to the US cash session (SPY's bars)
@@ -881,35 +1110,192 @@ def horizon_test(_P: dict, stamp: str, wt: tuple, scope: str):
     return pd.DataFrame(rows) if rows else None
 
 
+# ── Quant score: fixed rules from published research, nothing fitted to this data ──────────────
+# (factor, sign from the literature, source). Signs were set from the papers, not from this sample.
+QUANT_FACTORS = [
+    ("Residu-momentum 12-1 mnd", +1, "Blitz, Huij & Martens 2011"),
+    ("Koersmomentum 12-1 mnd", +1, "Jegadeesh & Titman 1993"),
+    ("Nabijheid 52-weken-top", +1, "George & Hwang 2004"),
+    ("Rendement laatste maand", -1, "Jegadeesh 1990 (korte-termijnomkeer)"),
+    ("Grootste dagwinst (loterij)", -1, "Bali, Cakici & Whitelaw 2011"),
+    ("Netto-uitgifte aandelen", -1, "Pontiff & Woodgate 2008"),
+    ("Short: dagen tot dekking", -1, "Hong, Li, Ni, Scheinkman & Yan 2016"),
+    ("Seizoenspatroon", +1, "Heston & Sadka 2008"),
+]
+QUANT_PRIMARY_H = 60      # the horizon the verdict is based on, fixed in advance
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def quant_score(_P: dict, _extra: dict, key: str):
+    """Composite of well-documented return anomalies. Each factor is ranked within its asset class per day,
+    signed as in the original paper, and averaged with equal weights. No parameter is estimated from this
+    data, so the whole history can serve as a test. Returns (score panel, dict of signed factor rank panels)."""
+    cols = [c for c in _P["Close"].columns if c in META.index]
+    C = _P["Close"][cols]
+    groups, classes = META.loc[cols, "group"], META.loc[cols, "cls"]
+    r1 = C.pct_change(fill_method=None)
+    vol = r1.rolling(60, min_periods=20).std()
+    raw = {
+        "Residu-momentum 12-1 mnd": residual_returns(r1, groups, classes).shift(20).rolling(230, min_periods=150).sum() / (vol * np.sqrt(230)),
+        "Koersmomentum 12-1 mnd": C.shift(20) / C.shift(250) - 1,
+        "Nabijheid 52-weken-top": C / C.rolling(250, min_periods=120).max(),
+        "Rendement laatste maand": C / C.shift(20) - 1,
+        "Grootste dagwinst (loterij)": r1.rolling(20).max(),
+        "Seizoenspatroon": sum(C.shift(k - 20) / C.shift(k) - 1 for k in (250, 500, 750)) / 3,
+    }
+    if "Netto-uitgifte aandelen · 250D" in _extra:
+        raw["Netto-uitgifte aandelen"] = _extra["Netto-uitgifte aandelen · 250D"].reindex(index=C.index, columns=cols)
+    if "Short · dagen tot dekking" in _extra:
+        raw["Short: dagen tot dekking"] = _extra["Short · dagen tot dekking"].reindex(index=C.index, columns=cols)
+    cl = classes.values
+    signed = {}
+    for name, sign, _ in QUANT_FACTORS:
+        if name not in raw:
+            continue
+        x = raw[name].replace([np.inf, -np.inf], np.nan)
+        rk = pd.DataFrame(np.nan, index=C.index, columns=cols)
+        for c_ in np.unique(cl):
+            m = cl == c_
+            if m.sum() >= 5:
+                rk.loc[:, m] = x.loc[:, m].rank(axis=1, pct=True).values - 0.5
+        signed[name] = rk * sign
+    stack = np.stack([v.values for v in signed.values()], axis=2)
+    cnt = (~np.isnan(stack)).sum(axis=2)
+    score = pd.DataFrame(np.where(cnt >= 4, np.nanmean(np.where(cnt[..., None] >= 4, stack, np.nan), axis=2), np.nan), index=C.index, columns=cols)
+    return score, signed
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def quant_test(_P: dict, _score: pd.DataFrame, _signed: dict, key: str, step: int = 5):
+    """Top 20% minus bottom 20% of the score (and of every single factor) on sector/region-neutral forward
+    returns, entered at the next close. Means use every 5th day; t-statistics credit only non-overlapping periods.
+    Also split by half of the sample and by region, to see whether the result is more than one lucky stretch."""
+    cols = list(_score.columns)
+    C = _P["Close"][cols]
+    groups, classes = META.loc[cols, "group"], META.loc[cols, "cls"]
+    is_stock = (~META.loc[cols, "core"]).values
+    out, by_factor, by_part = [], [], []
+
+    def spread(sig, res, pos, mask):
+        sr = sig.iloc[pos].loc[:, mask].rank(axis=1, pct=True)
+        rr = res.iloc[pos].loc[:, mask]
+        ok = sr.notna() & rr.notna()
+        return (rr.where((sr > 0.8) & ok).mean(axis=1) - rr.where((sr <= 0.2) & ok).mean(axis=1)).dropna()
+
+    def stat(sp, h):
+        n_eff = max(len(sp) * step / (h + 1), 1.0)
+        t = float(sp.mean() / (sp.std(ddof=1) / np.sqrt(n_eff))) if len(sp) > 5 and sp.std(ddof=1) > 0 else 0.0
+        return float(sp.mean() * 100), t, int(round(n_eff)), float((sp > 0).mean() * 100)
+
+    for h in (20, 60, 120):
+        res = residual_returns(C.shift(-h - 1) / C.shift(-1) - 1, groups, classes)
+        pos = list(range(270, len(C) - h - 1, step))
+        sp = spread(_score, res, pos, is_stock)
+        m_, t_, n_, hit_ = stat(sp, h)
+        out.append({"h": h, "spread": m_, "t": t_, "n": n_, "hit": hit_, "series": sp})
+        if h == QUANT_PRIMARY_H:
+            half = len(sp) // 2
+            for lab, part in (("Eerste helft", sp.iloc[:half]), ("Tweede helft", sp.iloc[half:])):
+                a_, b_, c_, _ = stat(part, h)
+                by_part.append({"Deel": f"{lab} ({part.index[0]:%Y}–{part.index[-1]:%Y})", "Top−bodem %": a_, "t": b_, "Perioden": c_})
+            for lab, cl_ in (("Aandelen VS", "US Stocks"), ("Aandelen Europa", "Europe Stocks"), ("Aandelen Azië", "Asia Stocks")):
+                a_, b_, c_, _ = stat(spread(_score, res, pos, (classes == cl_).values), h)
+                by_part.append({"Deel": lab, "Top−bodem %": a_, "t": b_, "Perioden": c_})
+            a_, b_, c_, _ = stat(spread(_score, res, pos, ~is_stock), h)
+            by_part.append({"Deel": "Kern (ETF's, futures, FX)", "Top−bodem %": a_, "t": b_, "Perioden": c_})
+            for name, sign, src in QUANT_FACTORS:
+                if name in _signed:
+                    a_, b_, c_, _ = stat(spread(_signed[name], res, pos, is_stock), h)
+                    by_factor.append({"Factor": name, "Richting": "hoog = beter" if sign > 0 else "laag = beter", "Top−bodem %": a_, "t": b_, "Bron": src})
+    return out, pd.DataFrame(by_factor), pd.DataFrame(by_part)
+
+
+ROT_LOOKBACKS, ROT_FORWARD = (5, 20, 60, 120), (5, 20, 60, 120)
+ROT_HYPOTHESES = [(20, 20), (60, 60)]      # fixed before looking: does real fund flow over 20/60 days say anything about the next 20/60?
+
+
+@st.cache_data(ttl=3600, show_spinner=False)
+def rotation_test(_sp: dict, key: str):
+    """Rotation test on funds with REAL flows (SPDR creations/redemptions), free of survivorship in single stocks.
+    Signal: net flow as % of assets, ranked within the fund's own bucket. Outcome: forward total return minus
+    the bucket median, entered at the next close. Top third minus bottom third, averaged over 4 start days.
+    The same test is run with plain price trend (250-day momentum skipping the last month) for comparison."""
+    close = _sp["close"]
+    funds = [c for c in _sp["so"].columns if c in close.columns and close[c].notna().sum() > 400]
+    close = close[funds].dropna(how="all")
+    sp = {k: _sp[k][funds].reindex(close.index).ffill(limit=5) for k in ("so", "nav", "tna")}
+    bucket = pd.Series({f: SPDR_FUNDS[f][1] for f in funds})
+    small = (bucket.map(bucket.value_counts()) < 3).values
+
+    def neutral(x):                       # minus bucket median (overall median for tiny buckets)
+        bm = x.T.groupby(bucket.values).transform("median").T.values
+        return x - np.where(small[None, :], np.nanmedian(x.values, axis=1)[:, None], bm)
+
+    def brank(x):                         # rank within bucket per date
+        return x.T.groupby(bucket.values).rank(pct=True).T
+
+    sigs = {("Echte fondsstroom", L): brank(spdr_flow_pct(sp, L)) for L in ROT_LOOKBACKS}
+    sigs[("Koerstrend", 250)] = brank(close.shift(20) / close.shift(250) - 1)
+    rows = []
+    for h in ROT_FORWARD:
+        res = neutral(close.shift(-h - 1) / close.shift(-1) - 1)
+        offsets = [0] if h < 20 else [0, h // 4, h // 2, 3 * h // 4]
+        for (kind, L), sr_all in sigs.items():
+            runs = []
+            for off in offsets:
+                pos = list(range(260 + off, len(close) - h - 1, h))
+                rr, sr = res.iloc[pos], sr_all.iloc[pos]
+                ok = sr.notna() & rr.notna()
+                sp_ = (rr.where((sr > 2 / 3) & ok).mean(axis=1) - rr.where((sr <= 1 / 3) & ok).mean(axis=1)).dropna()
+                if len(sp_) >= 8 and sp_.std() > 0:
+                    runs.append((sp_.mean() * 100, sp_.mean() / sp_.std(ddof=1) * np.sqrt(len(sp_)), len(sp_)))
+            if runs:
+                a_ = np.array(runs)
+                rows.append({"kind": kind, "L": L, "h": h, "spread": float(a_[:, 0].mean()), "t": float(a_[:, 1].mean()), "n": int(a_[:, 2].min()),
+                             "t_min": float(a_[:, 1].min()), "t_max": float(a_[:, 1].max())})
+    return (pd.DataFrame(rows), len(funds)) if rows else (None, len(funds))
+
+
 # ── machine-learning forecast with honest self-tuning ───────────────────────
 # Candidate settings the model tries on itself: (forecast horizon in days, tree depth, min samples per leaf)
-ML_CONFIGS = [(h, d, leaf) for h in (5, 20, 60) for d, leaf in ((2, 400), (3, 200))]
+ML_CONFIGS = [(20, 3, 200), (60, 3, 200), (120, 3, 200)]     # (forecast horizon in days, tree depth, min samples per leaf)
 ML_MIN_PERIODS = 12    # a verdict of 'proven' needs at least this many unseen, non-overlapping test periods
 
 
+def _z(x):
+    sd = np.nanstd(x)
+    return (x - np.nanmean(x)) / sd if sd > 0 else x * 0.0
+
+
 def _fit_predict(Xtr, ytr, Xte, depth=3, leaf=200, cap=120_000):
-    """Gradient-boosted trees (scikit-learn; handles missing inputs). Training rows are capped by random
-    sub-sampling to keep it fast. Falls back to ridge regression if scikit-learn is missing."""
-    if len(ytr) > cap:
-        pick = np.random.default_rng(0).choice(len(ytr), cap, replace=False)
-        Xtr, ytr = Xtr[pick], ytr[pick]
+    """Ensemble: two gradient-boosted tree models on different random sub-samples plus a ridge regression.
+    Trees find interactions, the linear model keeps the broad tilt stable; averaging their standardised
+    forecasts is more robust than any one of them when the signal is weak."""
+    preds, name = [], "Ensemble: 2× gradient boosting + ridge"
+    Xtr0, Xte0 = np.nan_to_num(Xtr), np.nan_to_num(Xte)
+    mu, sd = Xtr0.mean(0), Xtr0.std(0) + 1e-9
+    A = (Xtr0 - mu) / sd
+    w = np.linalg.solve(A.T @ A + 0.02 * len(A) * np.eye(A.shape[1]), A.T @ (ytr - ytr.mean()))
+    preds.append(_z(((Xte0 - mu) / sd) @ w))
     try:
         from sklearn.ensemble import HistGradientBoostingRegressor
-        m = HistGradientBoostingRegressor(max_iter=60, learning_rate=0.08, max_depth=depth, min_samples_leaf=leaf,
-                                          l2_regularization=1.0, random_state=0)
-        m.fit(Xtr, ytr)
-        return m.predict(Xte), "Gradient boosting (scikit-learn)"
+        for seed in (0, 1):
+            Xs, ys = Xtr, ytr
+            if len(ytr) > cap:
+                pick = np.random.default_rng(seed).choice(len(ytr), cap, replace=False)
+                Xs, ys = Xtr[pick], ytr[pick]
+            m = HistGradientBoostingRegressor(max_iter=60, learning_rate=0.08, max_depth=depth, min_samples_leaf=leaf,
+                                              l2_regularization=1.0, random_state=seed)
+            m.fit(Xs, ys)
+            preds.append(_z(m.predict(Xte)))
     except ImportError:
-        Xtr, Xte = np.nan_to_num(Xtr), np.nan_to_num(Xte)
-        mu, sd = Xtr.mean(0), Xtr.std(0) + 1e-9
-        A = (Xtr - mu) / sd
-        w = np.linalg.solve(A.T @ A + 50.0 * np.eye(A.shape[1]), A.T @ (ytr - ytr.mean()))
-        return ((Xte - mu) / sd) @ w + ytr.mean(), "Ridge-regressie (numpy)"
+        name = "Ridge-regressie (scikit-learn ontbreekt)"
+    return np.mean(preds, axis=0), name
 
 
 def _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start):
-    """Train on the past only (with an h-day gap so no future leaks in), predict the next block, repeat.
-    Returns one row per non-overlapping test date: (date position, rank-IC, top-bottom spread, quintile returns)."""
+    """Train on the past only (with a gap of h+1 days so no future leaks in), predict the next block, repeat.
+    Returns one row per test date: (date position, rank-IC, top-bottom spread, quintile returns)."""
     lab = valid & ~np.isnan(Y)
     gap = int(np.ceil((h + 1) / step)) + 1
     PR = np.full(Y.shape, np.nan)
@@ -922,45 +1308,50 @@ def _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start):
         blk = PR[i0:i0 + retrain]
         blk[te] = pred
     rows = []
-    for i in range(start, len(Y), gap):
+    for i in range(start, len(Y)):
         ok = ~np.isnan(PR[i]) & ~np.isnan(R[i])
         if ok.sum() < 50:
             continue
         p, r = pd.Series(PR[i][ok]), pd.Series(R[i][ok])
         qm = r.groupby(pd.qcut(p.rank(method="first"), 5, labels=False)).mean()
         rows.append((i, p.corr(r, method="spearman"), qm.iloc[-1] - qm.iloc[0], qm.values))
-    return rows, lab
+    return rows, lab, PR
 
 
-def _metrics(rows):
+def _metrics(rows, h, step):
+    """Averages use EVERY test date (so the result does not hinge on which day a period starts); the t-statistic
+    only credits the number of NON-overlapping periods, because overlapping windows are not independent."""
     ic, sp = np.array([r[1] for r in rows]), np.array([r[2] for r in rows])
-    t = lambda x: float(x.mean() / x.std(ddof=1) * np.sqrt(len(x))) if len(x) > 2 and x.std(ddof=1) > 0 else 0.0
+    n_eff = max(len(rows) * step / (h + 1), 1.0)
+    t = lambda x: float(x.mean() / (x.std(ddof=1) / np.sqrt(n_eff))) if len(x) > 2 and x.std(ddof=1) > 0 else 0.0
     return {"ic": float(ic.mean()), "ic_t": t(ic), "spread": float(sp.mean() * 100), "spread_t": t(sp),
-            "hit": float((sp > 0).mean() * 100), "n": len(rows), "quint": np.mean([r[3] for r in rows], axis=0) * 100}
+            "hit": float((sp > 0).mean() * 100), "n": int(round(n_eff)), "quint": np.mean([r[3] for r in rows], axis=0) * 100}
 
 
-def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
+def ml_forecast(P: dict, macro: pd.DataFrame, extra: dict = None, step: int = 5, retrain: int = 40):
     """Learn from history which patterns preceded out-performance, tune itself, and report honestly.
 
-    Inputs   : per instrument - 6 flow components on 5D/20D/60D, momentum on 5/20/60/120/250D, distance from the
-               250-day high, volatility, asset class. Market-wide - cross-asset regime ratios, VIX, and (when
-               reachable) FRED credit/curve/liquidity and CFTC positioning, each lagged by its publication delay.
-    Target   : rank of the return over the NEXT h trading days RELATIVE TO the instrument's own sector/region,
-               scaled by its volatility (so the model is not asked to predict the market, sector or currency).
-    Tuning   : every setting in ML_CONFIGS is walked forward through history; the one that ranks best on the
-               VALIDATION period (first 65% of the test span) is selected.
-    Verdict  : measured only on the HOLD-OUT period (last 35%), which played no part in choosing the setting.
-    Caveat   : the stock list is today's large caps, so companies that failed or shrank are missing
-               (survivorship bias). This flatters absolute returns; the top-minus-bottom comparison is less affected.
-    The result is stored on disk and reused until the next trading day's data arrives.
-    Returns None when there is too little history."""
+    Inputs per instrument (each ranked against its own asset class on the same day, so scales are comparable
+    through time):
+      · money flow: 6 components on 5/20/60 days (CMF, MFI, relative strength x2, flow momentum, volume intensity)
+      · price path: momentum 5/20/60/120 days, 250-day momentum skipping the last month, residual momentum
+        (own return minus its sector), sector momentum, distance from the 250-day high, largest one-day gain
+      · when the money moves: overnight versus intraday return (institutions and news act outside the session)
+      · news days: direction of returns on abnormal-volume days (a price x volume proxy for earnings drift)
+      · character: volatility, illiquidity, seasonality (same period in the three previous years)
+      · real flows, when available: short interest, net share issuance/buybacks, SPDR sector fund flows
+    Market-wide inputs: cross-asset regime ratios, VIX, CFTC positioning, FRED, SPDR flows into stocks/cash/credit/duration.
+    Target   : rank of the next-h-day return RELATIVE TO the instrument's own sector/region, scaled by volatility.
+    Tuning   : each horizon in ML_CONFIGS is walked forward; the one that ranks best on the VALIDATION period
+               (first 65% of the test span) is selected. Verdict: only the HOLD-OUT period (last 35%).
+    Caveat   : the stock list is today's large caps (survivorship bias)."""
+    extra = extra or {}
     cols = [c for c in P["Close"].columns if c in META.index]
     P_ = {k: v[cols] for k, v in P.items()}
-    C = P_["Close"]
-    key = f"{C.index[-1].date()}|{len(cols)}|{len(C)}|{','.join(macro.columns)}|v5"
-    f_ = CACHE_DIR / "model.pkl"
+    C, O, V = P_["Close"], P_["Open"], P_["Volume"]
+    key = f"{C.index[-1].date()}|{len(cols)}|{len(C)}|{','.join(macro.columns)}|{','.join(extra)}|v6"
     try:
-        saved = pd.read_pickle(f_)
+        saved = pd.read_pickle(CACHE_DIR / "model.pkl")
         if saved.get("key") == key:
             return saved["result"]
     except Exception:
@@ -975,59 +1366,62 @@ def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
             feats[f"{c} · {n}D"] = fp[c]
     n_req = len(feats)                                              # these must be present; later inputs may be missing
     for n in (5, 20, 60, 120):
-        feats[f"Momentum · {n}D"] = np.tanh((C / C.shift(n) - 1) / (vol * np.sqrt(n)))
-    feats["Momentum · 250D excl. laatste 20D"] = np.tanh((C.shift(20) / C.shift(250) - 1) / (vol * np.sqrt(230)))
+        feats[f"Momentum · {n}D"] = (C / C.shift(n) - 1) / (vol * np.sqrt(n))
+    feats["Momentum · 250D excl. laatste 20D"] = (C.shift(20) / C.shift(250) - 1) / (vol * np.sqrt(230))
+    resid_d = residual_returns(r1, groups, classes)
+    feats["Residu-momentum · 250D excl. 20D"] = resid_d.shift(20).rolling(230, min_periods=150).sum() / (vol * np.sqrt(230))
+    ret120 = C / C.shift(120) - 1
+    feats["Sectormomentum · 120D"] = ret120 - residual_returns(ret120, groups, classes)
     feats["Afstand tot 250D-top"] = C / C.rolling(250, min_periods=120).max() - 1
+    feats["Grootste dagwinst · 20D"] = r1.rolling(20).max() / vol
+    on, intra = np.log(O / C.shift(1)), np.log(C / O)
+    for n in (20, 60):
+        feats[f"Nachtrendement · {n}D"] = on.rolling(n).sum() / (vol * np.sqrt(n))
+        feats[f"Dagrendement · {n}D"] = intra.rolling(n).sum() / (vol * np.sqrt(n))
+    hasv = np.broadcast_to((V.tail(250).sum() > 0).values, V.shape)
+    relv = (V / V.rolling(60, min_periods=20).median().where(lambda x: x > 0)).where(hasv)
+    feats["Nieuwsdag-richting · 60D"] = ((r1 / vol) * (relv - 2).clip(lower=0, upper=5)).rolling(60, min_periods=20).sum()
     feats["Volatiliteit (60D)"] = np.log(vol.where(vol > 0) * np.sqrt(252))
+    feats["Illiquiditeit"] = np.log((r1.abs() / (C * V).where(lambda x: x > 0)).rolling(60, min_periods=20).mean().where(lambda x: x > 0))
+    feats["Seizoen · zelfde periode vorige 3 jaar"] = sum(C.shift(k - 20) / C.shift(k) - 1 for k in (250, 500, 750)) / 3
+    for k, v in extra.items():
+        feats[k] = v.reindex(index=C.index, columns=cols)
+    n_rank = len(feats)                                             # everything so far is ranked within asset class
     codes = pd.Series(pd.factorize(classes)[0].astype(float), index=cols)
     feats["Categorie"] = pd.DataFrame(np.tile(codes.values, (len(C), 1)), index=C.index, columns=cols)
     names = list(feats) + list(macro.columns)
-    dates = C.index[260::step]
+    dates = C.index[260::step].union([C.index[-1]])                 # the last bar is always on the grid: it is today's forecast row
     if len(dates) < 160:
         return None
     F = np.empty((len(dates), len(cols), len(names)), dtype="float32")   # (dates, tickers, inputs)
     for j, k in enumerate(feats):
-        F[:, :, j] = feats[k].reindex(dates).values
+        F[:, :, j] = feats[k].reindex(dates).replace([np.inf, -np.inf], np.nan).values
     for j, k in enumerate(macro.columns, start=len(feats)):
         F[:, :, j] = macro[k].reindex(dates).values[:, None]
     del feats
     valid = ~np.isnan(F[:, :, :n_req]).any(axis=2)
+    for cl in np.unique(codes.values):                              # cross-sectional rank within asset class, per date
+        m = codes.values == cl
+        for j in range(n_rank):
+            F[:, m, j] = pd.DataFrame(F[:, m, j]).rank(axis=1, pct=True).values - 0.5
     start = max(int(250 / step), int(len(dates) * 0.3))
     split = start + int((len(dates) - start) * 0.65)
     trials = []
     for h, depth, leaf in ML_CONFIGS:
-        # Enter at the NEXT day's close and hold h days. Skipping a day matters: Asian and European markets close
-        # before the US, so same-day US information must not be allowed to "predict" their move.
-        # Target = return relative to the instrument's own sector/region, scaled by its volatility, then ranked.
+        # Enter at the NEXT day's close and hold h days (same-day US information must not "predict" Asia/Europe).
         fwd = residual_returns(C.shift(-h - 1) / C.shift(-1) - 1, groups, classes)
         Y, R = ((fwd / (vol * np.sqrt(h))).rank(axis=1, pct=True) - 0.5).reindex(dates).values, fwd.reindex(dates).values
-        rows, lab = _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start)
+        rows, lab, PR = _walk_forward(F, valid, Y, R, h, step, retrain, depth, leaf, start)
         val, hold = [r for r in rows if r[0] < split], [r for r in rows if r[0] >= split]
-        if len(val) < 6 or len(hold) < 4:
+        if len(val) * step < 6 * (h + 1) or len(hold) * step < 3 * (h + 1):
             continue
-        trials.append({"h": h, "depth": depth, "leaf": leaf, "val": _metrics(val), "hold": _metrics(hold), "rows": rows,
-                       "Y": Y, "lab": lab})
+        trials.append({"h": h, "depth": depth, "leaf": leaf, "val": _metrics(val, h, step), "hold": _metrics(hold, h, step),
+                       "all": _metrics(rows, h, step), "rows": rows, "Y": Y, "lab": lab})
     if not trials:
         return None
     best = max(trials, key=lambda t: t["val"]["ic_t"])                             # chosen on validation only
-    last = C.index[-1]
-    Xnow = np.empty((len(cols), len(names)), dtype="float32")
-    # rebuild today's inputs (the latest bar is usually not on the sampled grid)
-    fp_now = {n: flow_panels({k: v.tail(400) for k, v in P_.items()}, n, groups, classes) for n in (5, 20, 60)}
-    j = 0
-    for n in (5, 20, 60):
-        for c in COMP_COLS:
-            Xnow[:, j] = fp_now[n][c].iloc[-1].values; j += 1
-    for n in (5, 20, 60, 120):
-        Xnow[:, j] = np.tanh((C.iloc[-1] / C.iloc[-1 - n] - 1) / (vol.iloc[-1] * np.sqrt(n))).values; j += 1
-    Xnow[:, j] = np.tanh((C.iloc[-21] / C.iloc[-251] - 1) / (vol.iloc[-1] * np.sqrt(230))).values; j += 1
-    Xnow[:, j] = (C.iloc[-1] / C.tail(250).max() - 1).values; j += 1
-    Xnow[:, j] = np.log(vol.iloc[-1].where(vol.iloc[-1] > 0) * np.sqrt(252)).values; j += 1
-    Xnow[:, j] = codes.values; j += 1
-    for k in macro.columns:
-        Xnow[:, j] = macro[k].iloc[-1]; j += 1
-    oknow = ~np.isnan(Xnow[:, :n_req]).any(axis=1)
-    pnow, model_name = _fit_predict(F[best["lab"]], best["Y"][best["lab"]], Xnow[oknow], best["depth"], best["leaf"])
+    oknow = valid[-1]
+    pnow, model_name = _fit_predict(F[best["lab"]], best["Y"][best["lab"]], F[-1][oknow], best["depth"], best["leaf"])
     yl = best["Y"][best["lab"]]
 
     def _corr(j_):
@@ -1035,19 +1429,22 @@ def ml_forecast(P: dict, macro: pd.DataFrame, step: int = 5, retrain: int = 26):
         m = ~np.isnan(x)
         return float(np.corrcoef(x[m], yl[m])[0, 1]) if m.sum() > 1000 and np.nanstd(x[m]) > 0 else 0.0
 
-    table_ = pd.DataFrame([{"Horizon": f"{t['h']}D", "Diepte": t["depth"], "Gekozen": "◀ gekozen" if t is best else "",
+    table_ = pd.DataFrame([{"Horizon": f"{t['h']}D", "Gekozen": "◀ gekozen" if t is best else "",
                             "Validatie IC": t["val"]["ic"], "Validatie t": t["val"]["ic_t"], "Validatie n": t["val"]["n"],
                             "Eindtoets IC": t["hold"]["ic"], "Eindtoets t": t["hold"]["ic_t"], "Eindtoets n": t["hold"]["n"],
-                            "Eindtoets top−bodem %": t["hold"]["spread"]} for t in trials])
-    result = {"best": {k: best[k] for k in ("h", "depth", "leaf", "val", "hold")}, "trials": table_,
-              "curve": pd.Series(np.cumsum([r[2] for r in best["rows"]]) * 100, index=[dates[r[0]] for r in best["rows"]]),
-              "split_date": dates[split], "forecast": (pd.Series(pnow, index=np.array(cols)[oknow]).rank(pct=True) - 0.5) * 200,   # percentile of today's forecast, -100..+100
+                            "Eindtoets top−bodem %": t["hold"]["spread"], "Hele testperiode t": t["all"]["ic_t"],
+                            "Hele testperiode n": t["all"]["n"]} for t in trials])
+    gap_ = int(np.ceil((best["h"] + 1) / step)) + 1
+    curve_rows = best["rows"][::gap_]                                              # non-overlapping, for the cumulative chart
+    result = {"best": {k: best[k] for k in ("h", "depth", "leaf", "val", "hold", "all")}, "trials": table_,
+              "curve": pd.Series(np.cumsum([r[2] for r in curve_rows]) * 100, index=[dates[r[0]] for r in curve_rows]),
+              "split_date": dates[split], "forecast": (pd.Series(pnow, index=np.array(cols)[oknow]).rank(pct=True) - 0.5) * 200,
               "relevance": pd.Series({k: _corr(j_) for j_, k in enumerate(names)}),
               "model": model_name, "examples": int(best["lab"].sum()), "first": dates[0], "test_from": dates[start],
-              "n_feat": len(names), "n_inst": len(cols), "macro": list(macro.columns), "trained": last}
+              "n_feat": len(names), "n_inst": len(cols), "macro": list(macro.columns), "extra": list(extra), "trained": C.index[-1]}
     try:
         CACHE_DIR.mkdir(exist_ok=True)
-        pd.to_pickle({"key": key, "result": result}, f_)
+        pd.to_pickle({"key": key, "result": result}, CACHE_DIR / "model.pkl")
     except Exception:
         pass
     return result
@@ -1204,7 +1601,7 @@ def volume_profile_fig(P, t, days=60):
 # 6. STATE, SIDEBAR, DATA LOAD
 # ════════════════════════════════════════════════════════════════════════════
 ss = st.session_state
-VIEWS = ["SIGNALEN", "VOORSPELLING", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "PORTEFEUILLE", "GEHEUGEN", "METHODOLOGY", "HANDLEIDING"]
+VIEWS = ["SIGNALEN", "VOORSPELLING", "ECHTE STROMEN", "COMMAND CENTER", "HEATMAP", "DEEP DIVE", "REGIME & LIQUIDITY", "LEADERBOARDS", "PORTEFEUILLE", "GEHEUGEN", "METHODOLOGY", "HANDLEIDING"]
 if "pins" not in ss:                      # first run of this session: restore everything from memory
     saved_ = mem_settings()
     qp = st.query_params.get("pins", "")
@@ -1435,6 +1832,8 @@ COLCFG = {
     "Trend": st.column_config.LineChartColumn("Trend", width="small"),
     "Model": st.column_config.ProgressColumn("Model", min_value=-100, max_value=100, format="%+.0f",
                                              help="Modelverwachting voor de komende 20 handelsdagen: +100 = verwacht bij de best presterende, −100 = bij de slechtste"),
+    "Kwant": st.column_config.ProgressColumn("Kwant", min_value=-100, max_value=100, format="%+.0f",
+                                             help="Kwantscore: vaste regels uit onderzoek. +100 = hoogste van het universum, −100 = laagste"),
     "Live": st.column_config.NumberColumn("Live", format="%+.0f", help="Flow score vandaag, op 15-minutenkoersen"),
     "5D": st.column_config.NumberColumn("5D", format="%+.0f", help="Flow score, laatste 5 handelsdagen"),
     "20D": st.column_config.NumberColumn("20D", format="%+.0f", help="Flow score, laatste 20 handelsdagen"),
@@ -1448,7 +1847,7 @@ def styled(df):
     def c(v):
         return f"color:{GREEN}" if v > 5 else f"color:{RED}" if v < -5 else f"color:{AMBER}"
     cols = [x for x in ["Score", "Δ Score", "CMF raw", "RS vs Peers", "RS vs Risk-On", "Return %", "Net $ Flow", "Flow % of $Vol",
-                        "Vote", "Move %", "Z", "Live", "5D", "20D", "60D", "Totaal", "Model"] if x in df.columns]
+                        "Vote", "Move %", "Z", "Live", "5D", "20D", "60D", "Totaal", "Model", "Kwant"] if x in df.columns]
     sty = df.style.map(lambda v: c(v * 100) if isinstance(v, (int, float)) and np.isfinite(v) else "", subset=cols)
     if "Signaal" in df.columns:
         sty = sty.map(lambda v: f"color:{GREEN};font-weight:700" if "▲" in str(v) else f"color:{RED};font-weight:700" if "▼" in str(v) else f"color:{DIM}",
@@ -1711,14 +2110,32 @@ def remember():
     ss["_remembered"] = flag
 
 
+def get_quant():
+    """Quant score and its test for today's data. Needs get_ml() to have run first (it loads the real-flow sources)."""
+    xf_ = ss.get("_xf") or {}
+    qk = f"{stamp}|{','.join(xf_)}"
+    score, signed = quant_score(P, xf_, qk)
+    res, by_factor, by_part = quant_test(P, score, signed, qk)
+    prim = next(r for r in res if r["h"] == QUANT_PRIMARY_H)
+    halves = by_part[by_part["Deel"].str.contains("helft")]
+    proven = bool(prim["t"] > 2 and prim["spread"] > 0 and (halves["Top−bodem %"] > 0).all())
+    now = (score.iloc[-1].rank(pct=True) - 0.5) * 200
+    return {"now": now, "res": res, "by_factor": by_factor, "by_part": by_part, "proven": proven, "prim": prim}
+
+
 def get_ml():
     """Train (or load from disk) the forecast model once per trading day."""
     mk = f"ml|{P['Close'].index[-1].date()}|{P['Close'].shape}"
     if ss.get("_ml_key") != mk:
-        with st.spinner("Model trainen, zichzelf afstellen en toetsen op 10 jaar data… (eens per handelsdag, ±1–3 minuten; daarna direct)"):
+        with st.spinner("Echte geldstroomdata ophalen en model trainen op 10 jaar data… De allereerste keer duurt dit 10–15 minuten "
+                        "(short-posities, aandelenaantallen en fondsstromen worden eenmalig gedownload); daarna eens per handelsdag ±3 minuten."):
             fred_ = {} if demo else fetch_fred()
             cot_ = None if demo else fetch_cot_history()
-            ss["_ml"], ss["_ml_key"] = ml_forecast(P, macro_features(P, fred_, cot_)), mk
+            mac_ = macro_features(P, fred_, cot_)
+            xf_, xm_, ss["_src_status"] = ({}, pd.DataFrame(index=P["Close"].index), {}) if demo else \
+                source_features(P, [c for c in P["Close"].columns if c in META.index])
+            ss["_xf"] = xf_
+            ss["_ml"], ss["_ml_key"] = ml_forecast(P, pd.concat([mac_, xm_], axis=1), xf_), mk
     return ss["_ml"]
 
 
@@ -1948,11 +2365,52 @@ van {len(sig)} instrumenten</div>""", unsafe_allow_html=True)
 """)
 
 elif view == "VOORSPELLING":
-    sec("Zelflerend model · leert uit het verleden welke geldstroompatronen aan koersstijgingen voorafgingen")
     ml = get_ml()
+    qs = None
+    if not demo:
+        with st.spinner("Kwantscore berekenen en toetsen…"):
+            try:
+                qs = get_quant()
+            except Exception:
+                qs = None
+    if qs:
+        sec("Kwantscore · vaste regels uit gepubliceerd onderzoek · niets afgesteld op deze data")
+        pr = qs["prim"]
+        k_ = st.columns(5)
+        with k_[0]:
+            kpi(f"Voorspellend? · {QUANT_PRIMARY_H}D", "JA — AANTOONBAAR" if qs["proven"] else "ZWAK" if pr["spread"] > 0 else "NEE",
+                f"{pr['n']} perioden · beide helften {'positief' if (qs['by_part'][qs['by_part']['Deel'].str.contains('helft')]['Top−bodem %'] > 0).all() else 'niet beide positief'}",
+                GREEN if qs["proven"] else AMBER if pr["spread"] > 0 else RED)
+        for i_, r_ in enumerate(qs["res"]):
+            with k_[i_ + 1]:
+                kpi(f"Top − bodem · {r_['h']} dagen", f"{r_['spread']:+.2f}%", f"t = {r_['t']:+.1f} · {r_['n']} perioden · {r_['hit']:.0f}% raak", col(r_["t"] * 30))
+        with k_[4]:
+            kpi("Factoren", f"{len(qs['by_factor'])} van {len(QUANT_FACTORS)}", "beschikbaar in de data")
+        st.markdown("<div class='note'>De kwantscore telt acht bekende, in de wetenschappelijke literatuur beschreven effecten bij elkaar op, elk met het teken uit "
+                    "het oorspronkelijke artikel en met gelijk gewicht. Er wordt niets geschat of afgesteld op deze data; daarom mag de hele periode 2017–2026 als "
+                    f"toets dienen in plaats van alleen het laatste stuk. Het oordeel is vooraf vastgelegd op {QUANT_PRIMARY_H} dagen, alle aandelen samen: "
+                    "t boven 2 én positief in beide helften van de periode. Rendement ten opzichte van de eigen sector of regio, instap op de slotkoers van de dag erna, "
+                    "zonder kosten. Kanttekening: de aandelenlijst bevat alleen de grote bedrijven van vandaag.</div>", unsafe_allow_html=True)
+        q1, q2, q3 = st.columns([1.15, 1.25, 1])
+        with q1:
+            sp_ = qs["prim"]["series"]
+            cum = (sp_ * 5 / (QUANT_PRIMARY_H + 1)).cumsum() * 100
+            fig = go.Figure(go.Scatter(x=cum.index, y=cum.values, line=dict(color=GREEN if cum.iloc[-1] > 0 else RED, width=1.8), fill="tozeroy",
+                                       fillcolor="rgba(0,255,156,0.06)", hovertemplate="%{x|%b %Y}: %{y:+.1f}%<extra></extra>"))
+            fig.add_hline(y=0, line=dict(color=BORDER))
+            show(lay(fig, 300, title=dict(text=f"OPGETELD VERSCHIL TOP − BODEM · {QUANT_PRIMARY_H}D · hele periode (%, zonder kosten)", font=dict(size=11, color=DIM))))
+        with q2:
+            st.dataframe(qs["by_factor"].style.format({"Top−bodem %": "{:+.2f}", "t": "{:+.1f}"})
+                         .map(lambda v: f"color:{GREEN}" if v > 2 else f"color:{RED}" if v < 0 else f"color:{AMBER}", subset=["t"]),
+                         width="stretch", hide_index=True, height=300)
+        with q3:
+            st.dataframe(qs["by_part"].style.format({"Top−bodem %": "{:+.2f}", "t": "{:+.1f}"})
+                         .map(lambda v: f"color:{GREEN}" if v > 2 else f"color:{RED}" if v < 0 else f"color:{AMBER}", subset=["t"]),
+                         width="stretch", hide_index=True, height=300)
     if ml is None:
         st.info("Te weinig historie om een model te trainen en eerlijk te toetsen. In Live-modus wordt 10 jaar data gebruikt.")
     else:
+        sec("Zelflerend model · leert uit het verleden welke patronen aan koersstijgingen voorafgingen")
         bst, hd, vl = ml["best"], ml["best"]["hold"], ml["best"]["val"]
         H = bst["h"]
         sig_ = hd["ic_t"] > 2 and hd["spread"] > 0
@@ -1972,8 +2430,15 @@ elif view == "VOORSPELLING":
             kpi("Geleerd van", f"{ml['examples']:,}".replace(",", "."), f"voorbeelden sinds {ml['first']:%m/%Y}")
         st.markdown(f"<div class='note'>Model: {ml['model']} · {ml['n_inst']} instrumenten · {ml['n_feat']} kenmerken per instrument per dag "
                     f"(waarvan {len(ml['macro'])} marktbrede) · gekozen instelling: horizon {H} dagen, "
-                    f"boomdiepte {bst['depth']} · afgesteld op {ml['test_from']:%b %Y} – {ml['split_date']:%b %Y} (validatie-IC {vl['ic']:+.3f}, t = {vl['ic_t']:+.1f}) · "
+                    f"ensemble · afgesteld op {ml['test_from']:%b %Y} – {ml['split_date']:%b %Y} (validatie-IC {vl['ic']:+.3f}, t = {vl['ic_t']:+.1f}) · "
                     f"eindtoets vanaf {ml['split_date']:%b %Y} op data die bij het afstellen niet gebruikt is.</div>", unsafe_allow_html=True)
+        al_ = bst.get("all")
+        srcs = ss.get("_src_status") or {}
+        st.markdown("<div class='note'>" + (f"Hele testperiode (afstellen + eindtoets samen, {al_['n']} perioden): IC {al_['ic']:+.3f}, t = {al_['ic_t']:+.1f}, "
+                                            f"top−bodem {al_['spread']:+.2f}% (t = {al_['spread_t']:+.1f}). Dit getal is iets geflatteerd, omdat de horizon "
+                                            "op een deel van deze periode gekozen is. " if al_ else "") +
+                    "Echte databronnen in het model: " + (" · ".join(f"<b>{k_}</b> ({v_})" for k_, v_ in srcs.items()) or "geen (alleen koers en volume)") +
+                    ".</div>", unsafe_allow_html=True)
         g1_, g2_, g3_ = st.columns([1.2, 1, 1])
         with g1_:
             cv = ml["curve"]
@@ -1990,22 +2455,25 @@ elif view == "VOORSPELLING":
                                    text=[f"{v:+.2f}%" for v in hd["quint"]], textposition="outside", cliponaxis=False))
             show(lay(fig, 320, title=dict(text=f"EINDTOETS: RENDEMENT NA {H}D PER MODELGROEP · Q5 = hoogste verwachting", font=dict(size=11, color=DIM))))
         with g3_:
-            show(bar_scores(ml["relevance"].sort_values().pipe(lambda x: pd.concat([x.head(6), x.tail(6)])) * 1000, 320,
+            show(bar_scores(ml["relevance"].sort_values().pipe(lambda x: pd.concat([x.head(7), x.tail(7)])) * 1000, 320,
                             "WELKE KENMERKEN WOGEN MEE (samenhang ×1000)"))
         fc = compute(P, stamp, 20, wt, tuple(ss.extra))[0]
         fc = fc[fc.index.isin(ml["forecast"].index)][["Name", "Class", "Group", "Score", "Return %", "Trend"]].copy()
         fc["Model"] = ml["forecast"].reindex(fc.index)
+        if qs:
+            fc["Kwant"] = qs["now"].reindex(fc.index)
         fc = scope_filter(fc, "scope_ml")
-        FCOLS = ["Name", "Group", "Model", "Score", "Return %", "Trend"]
+        FCOLS = ["Name", "Group"] + (["Kwant"] if qs else []) + ["Model", "Score", "Return %", "Trend"]
+        fc_sort = st.radio("Sorteer op", (["Kwant"] if qs else []) + ["Model"], horizontal=True, key="fc_sort", label_visibility="collapsed")
         a, b = st.columns(2)
         with a:
-            sec(f"Hoogste modelverwachting · komende {H} handelsdagen · klik een rij voor details")
-            pick = table(fc.sort_values("Model", ascending=False).head(15), "ml_top", 560, FCOLS)
+            sec("Hoogste verwachting · klik een rij voor details")
+            pick = table(fc.sort_values(fc_sort, ascending=False).head(15), "ml_top", 560, FCOLS)
             if pick:
                 goto(pick); st.rerun()
         with b:
-            sec(f"Laagste modelverwachting · komende {H} handelsdagen · klik een rij voor details")
-            pick = table(fc.sort_values("Model").head(15), "ml_bot", 560, FCOLS)
+            sec("Laagste verwachting · klik een rij voor details")
+            pick = table(fc.sort_values(fc_sort).head(15), "ml_bot", 560, FCOLS)
             if pick:
                 goto(pick); st.rerun()
         sec("Termijntoets · werkt ‘volg het geld’, en op welke termijn?")
@@ -2213,6 +2681,144 @@ elif view == "PORTEFEUILLE":
                 pf["stop_pct"], pf["trail_pct"], pf["horizon_days"] = n_stop, n_trail, int(n_hor)
                 pf_save(pf)
                 st.rerun()
+
+elif view == "ECHTE STROMEN":
+    sec("Echte geldstromen · wat er werkelijk in en uit fondsen stroomde (SPDR · dagelijkse uitgifte en inname van aandelen)")
+    if demo:
+        st.info("Echte stromen zijn niet beschikbaar in demo-modus.")
+        sp = None
+    else:
+        with st.spinner("Fondsgegevens van State Street ophalen… (eerste keer ±1 minuut, daarna van schijf)"):
+            sp = load_spdr()
+        if sp is None:
+            st.info("De fondsgegevens konden niet worden opgehaald (ssga.com niet bereikbaar). Probeer het later opnieuw.")
+    if sp is not None:
+        funds_ = list(sp["so"].columns)
+        tna_now = sp["tna"].ffill().iloc[-1]
+        fl_usd = sp["so"].diff() * sp["nav"]
+        tab = pd.DataFrame({"Fonds": [SPDR_FUNDS[f][0] for f in funds_], "Soort": [SPDR_FUNDS[f][1] for f in funds_]}, index=funds_)
+        tab["Vermogen $ mrd"] = tna_now / 1e9
+        for n_ in (5, 20, 60, 120):
+            tab[f"{n_}D %"] = spdr_flow_pct(sp, n_).ffill(limit=3).iloc[-1]
+        tab["20D $ mln"] = fl_usd.rolling(20, min_periods=10).sum().ffill(limit=3).iloc[-1] / 1e6
+        tab.index.name = "Ticker"
+        eq_ = tab["Soort"] != "Bonds"
+        k_ = st.columns(5)
+        with k_[0]:
+            v_ = tab.loc[eq_, "20D $ mln"].sum() / 1e3
+            kpi("Aandelenfondsen · 20D", f"{v_:+,.1f} mrd $", "netto in- of uitstroom", col(v_ * 10))
+        with k_[1]:
+            v_ = tab.loc[~eq_, "20D $ mln"].sum() / 1e3
+            kpi("Obligatiefondsen · 20D", f"{v_:+,.1f} mrd $", "netto in- of uitstroom", col(v_ * 10))
+        with k_[2]:
+            t_ = tab["20D %"].idxmax()
+            kpi("Sterkste instroom", t_, f"{tab.loc[t_, 'Fonds']} · {tab.loc[t_, '20D %']:+.1f}% van vermogen", GREEN)
+        with k_[3]:
+            t_ = tab["20D %"].idxmin()
+            kpi("Sterkste uitstroom", t_, f"{tab.loc[t_, 'Fonds']} · {tab.loc[t_, '20D %']:+.1f}% van vermogen", RED)
+        with k_[4]:
+            kpi("Fondsen · stand", f"{len(funds_)}", f"t/m {sp['so'].index[-1]:%d-%m-%Y}")
+        st.markdown("<div class='note'>Dit zijn geen afgeleide maar gemeten stromen. Een ETF geeft nieuwe aandelen uit als er netto geld binnenkomt en "
+                    "trekt ze in als er geld uitgaat; State Street publiceert het aantal uitstaande aandelen per dag. Stroom = verandering in aantal × "
+                    "intrinsieke waarde, als percentage van het fondsvermogen aan het begin van de periode. De cijfers lopen één handelsdag achter. "
+                    "Ze dekken alleen SPDR-fondsen; andere fondshuizen stellen deze historie niet vrij beschikbaar.</div>", unsafe_allow_html=True)
+        f1, f2 = st.columns([1, 1.5])
+        with f1:
+            by_b = tab.groupby("Soort")["20D $ mln"].sum() / 1e3
+            fig = go.Figure(go.Bar(x=by_b.sort_values().values, y=by_b.sort_values().index, orientation="h",
+                                   marker_color=[GREEN if v > 0 else RED for v in by_b.sort_values().values],
+                                   text=[f"{v:+,.1f}" for v in by_b.sort_values().values], textposition="outside", cliponaxis=False))
+            show(lay(fig, 300, title=dict(text="NETTO STROOM PER SOORT · 20 DAGEN · miljard $", font=dict(size=11, color=DIM))))
+            top_ = pd.concat([tab.nsmallest(8, "20D %"), tab.nlargest(8, "20D %")[::-1]])["20D %"]
+            fig = go.Figure(go.Bar(x=top_.values, y=[f"{t} · {SPDR_FUNDS[t][0]}" for t in top_.index], orientation="h",
+                                   marker_color=[GREEN if v > 0 else RED for v in top_.values],
+                                   text=[f"{v:+.1f}%" for v in top_.values], textposition="outside", cliponaxis=False))
+            show(lay(fig, 470, title=dict(text="GROOTSTE IN- EN UITSTROOM · 20 DAGEN · % van fondsvermogen", font=dict(size=11, color=DIM))))
+        with f2:
+            pct_cols = ["5D %", "20D %", "60D %", "120D %"]
+            st.dataframe(tab.sort_values(["Soort", "20D %"], ascending=[True, False]).style
+                         .format({"Vermogen $ mrd": "{:,.1f}", "20D $ mln": "{:+,.0f}", **{c: "{:+.1f}" for c in pct_cols}})
+                         .map(lambda v: "" if pd.isna(v) else f"background-color:rgba({'0,255,156' if v > 0 else '255,45,85'},{min(abs(v) / 15, 1) * 0.55:.2f})",
+                              subset=pct_cols)
+                         .map(lambda v: f"color:{GREEN}" if v > 0 else f"color:{RED}" if v < 0 else "", subset=["20D $ mln"]),
+                         width="stretch", height=800)
+
+        sec("Rotatietoets · zegt echte fondsstroom iets over het vervolg?")
+        rt, n_f = rotation_test(sp, f"{sp['so'].index[-1]}|{len(funds_)}")
+        if rt is None:
+            st.info("Te weinig historie voor de rotatietoets.")
+        else:
+            fl_ = rt[rt["kind"] == "Echte fondsstroom"]
+            Z = fl_.pivot(index="L", columns="h", values="t").reindex(index=ROT_LOOKBACKS, columns=ROT_FORWARD)
+            SPm = fl_.pivot(index="L", columns="h", values="spread").reindex(index=ROT_LOOKBACKS, columns=ROT_FORWARD)
+            txt = [[("" if pd.isna(Z.loc[L, h]) else f"{'★ ' if (L, h) in ROT_HYPOTHESES else ''}{SPm.loc[L, h]:+.2f}%<br>t = {Z.loc[L, h]:+.1f}")
+                    for h in ROT_FORWARD] for L in ROT_LOOKBACKS]
+            r1_, r2_ = st.columns([1.25, 1])
+            with r1_:
+                fig = go.Figure(go.Heatmap(z=Z.values, x=[f"{h} dagen vooruit" for h in ROT_FORWARD], y=[f"Stroom over {L}D" for L in ROT_LOOKBACKS],
+                                           colorscale=SCALE, zmin=-4, zmax=4, xgap=3, ygap=3, text=txt, texttemplate="%{text}", textfont=dict(size=12),
+                                           colorbar=dict(title="t", thickness=10, tickfont=dict(size=9)), hoverinfo="skip"))
+                lay(fig, 330, title=dict(text=f"FONDSEN MET MEESTE INSTROOM MIN FONDSEN MET MEESTE UITSTROOM · {n_f} fondsen · rendement t.o.v. eigen soort",
+                                         font=dict(size=11, color=DIM)))
+                fig.update_yaxes(autorange="reversed")
+                show(fig)
+            with r2_:
+                lines = []
+                for (L, h) in ROT_HYPOTHESES:
+                    r_ = fl_[(fl_["L"] == L) & (fl_["h"] == h)]
+                    if r_.empty:
+                        continue
+                    r_ = r_.iloc[0]
+                    concl = (f"<b style='color:{GREEN}'>HET GELD VOLGEN WERKTE</b>" if r_["t"] > 2.4 else
+                             f"<b style='color:{RED}'>TEGEN HET GELD IN WERKTE</b>" if r_["t"] < -2.4 else f"<b style='color:{AMBER}'>GEEN AANTOONBAAR VERBAND</b>")
+                    lines.append(f"<b>Stroom over {L} dagen → rendement in de {h} dagen erna</b><br>verschil {r_['spread']:+.2f}% · t = {r_['t']:+.1f} "
+                                 f"(per startmoment {r_['t_min']:+.1f} tot {r_['t_max']:+.1f}) · {int(r_['n'])} perioden · {concl}")
+                tr_ = rt[rt["kind"] == "Koerstrend"]
+                trend_txt = " · ".join(f"{int(r['h'])}D vooruit {r['spread']:+.2f}% (t = {r['t']:+.1f})" for _, r in tr_.iterrows())
+                big = fl_[(fl_["t"].abs() > 3) & ~fl_.apply(lambda r: (r["L"], r["h"]) in ROT_HYPOTHESES, axis=1)]
+                more = ("<b>Opvallend buiten de twee vaste toetsen</b> (|t| boven 3): " + ", ".join(
+                    f"stroom {int(r['L'])}D → {int(r['h'])}D ({r['spread']:+.2f}%, t = {r['t']:+.1f})" for _, r in big.iterrows())
+                        if len(big) else "Buiten de twee vaste toetsen haalt geen enkele cel |t| boven 3.")
+                st.markdown(f"<div class='kpi' style='font-family:{MONO};font-size:12px;line-height:1.75'>" + "<br><br>".join(lines) +
+                            f"<br><br><b>Ter vergelijking, gewone koerstrend</b> (12 maanden, laatste maand overgeslagen):<br>{trend_txt}<br><br>{more}"
+                            f"<br><br><span style='color:{DIM}'>Groen = fondsen met instroom deden het daarna beter dan fondsen met uitstroom; rood = slechter. "
+                            "Twee toetsen (★) lagen vooraf vast en tellen vanaf |t| 2,4; de rest is verkennend en telt pas vanaf 3. "
+                            "Bovenste derde min onderste derde, instap op de slotkoers van de dag erna, zonder kosten.</span></div>", unsafe_allow_html=True)
+
+        sec("Short-posities · waar wordt het zwaarst tegen gewed? (FINRA, tweemaal per maand)")
+        us_ = tuple(c for c in P["Close"].columns if c in META.index and "." not in c and "=" not in c and "^" not in c and not c.endswith("-USD"))
+        if not (CACHE_DIR / "short.pkl").exists() and not st.button("Short-posities laden (eenmalig, enkele minuten en ±450 MB download)"):
+            st.caption("Nog niet opgehaald. Dit gebeurt ook vanzelf de eerste keer dat het model traint (VOORSPELLING of ANALIST).")
+        else:
+            with st.spinner("Short-posities ophalen…"):
+                si_ = load_short_interest(us_)
+            if si_ is None or si_.empty:
+                st.info("Geen short-gegevens beschikbaar.")
+            else:
+                d_last = si_["date"].max()
+                prev_dates = sorted(si_["date"].unique())
+                cur = si_[si_["date"] == d_last].set_index("symbol")
+                prv = si_[si_["date"] == prev_dates[-2]].set_index("symbol")["si"] if len(prev_dates) > 1 else pd.Series(dtype=float)
+                bd = pd.DataFrame({"Naam": [META.loc[t, "name"] if t in META.index else t for t in cur.index],
+                                   "Dagen tot dekking": cur["dtc"].values, "Short (mln stuks)": cur["si"].values / 1e6,
+                                   "Verandering %": ((cur["si"] / prv.reindex(cur.index) - 1) * 100).values}, index=cur.index)
+                bd = bd[bd["Short (mln stuks)"] > 0.05]
+                bd.index.name = "Ticker"
+                cfg_ = {"Dagen tot dekking": st.column_config.NumberColumn(format="%.1f", help="Shortpositie gedeeld door de gemiddelde dagomzet: hoeveel dagen kopen nodig is om alles terug te kopen"),
+                        "Short (mln stuks)": st.column_config.NumberColumn(format="%.1f"), "Verandering %": st.column_config.NumberColumn(format="%+.0f%%")}
+                s1_, s2_, s3_ = st.columns(3)
+                with s1_:
+                    st.caption("Hoogste dagen tot dekking")
+                    st.dataframe(bd.nlargest(15, "Dagen tot dekking"), width="stretch", height=420, column_config=cfg_)
+                with s2_:
+                    st.caption("Grootste toename van de shortpositie")
+                    st.dataframe(bd.nlargest(15, "Verandering %"), width="stretch", height=420, column_config=cfg_)
+                with s3_:
+                    st.caption("Grootste afname van de shortpositie")
+                    st.dataframe(bd.nsmallest(15, "Verandering %"), width="stretch", height=420, column_config=cfg_)
+                st.markdown(f"<div class='note'>Stand per {d_last:%d-%m-%Y} ({si_['date'].nunique()} rapporten in het geheugen). FINRA publiceert ongeveer acht "
+                            "werkdagen na de peildatum. Alleen in de VS genoteerde aandelen en fondsen. In onderzoek gaat een hoge shortpositie gemiddeld samen "
+                            "met een lager rendement daarna; het model krijgt deze gegevens als invoer.</div>", unsafe_allow_html=True)
 
 elif view == "GEHEUGEN":
     sec("Geheugen · wat de app op deze pc onthoudt")
