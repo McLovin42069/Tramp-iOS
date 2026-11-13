@@ -162,6 +162,14 @@ STOCKS = {
         "D05.SI=DBS O39.SI=OCBC U11.SI=UOB Z74.SI=Singtel",
 }
 
+# Stock-market indices themselves (not investable; shown for reference and used as benchmarks)
+U += [(t, n, "Indices", g) for g, lst in {
+    "Index VS": [("^GSPC", "S&P 500"), ("^NDX", "Nasdaq 100"), ("^IXIC", "Nasdaq Composite"), ("^DJI", "Dow Jones"), ("^RUT", "Russell 2000"), ("^SOX", "Semiconductor Index")],
+    "Index Europa": [("^STOXX50E", "Euro Stoxx 50"), ("^STOXX", "Stoxx Europe 600"), ("^GDAXI", "DAX"), ("^FCHI", "CAC 40"), ("^FTSE", "FTSE 100"), ("^AEX", "AEX"),
+                     ("^BFX", "BEL 20"), ("^SSMI", "SMI"), ("^IBEX", "IBEX 35"), ("FTSEMIB.MI", "FTSE MIB")],
+    "Index Azië": [("^N225", "Nikkei 225"), ("^HSI", "Hang Seng"), ("000001.SS", "Shanghai Composite"), ("^KS11", "KOSPI"), ("^TWII", "Taiwan Weighted"),
+                   ("^NSEI", "Nifty 50"), ("^AXJO", "ASX 200"), ("^STI", "Straits Times")]}.items() for t, n in lst]
+
 _core = {u[0] for u in U}
 _rows = []
 for (_c, _g), _txt in STOCKS.items():
@@ -169,6 +177,13 @@ for (_c, _g), _txt in STOCKS.items():
         _t, _, _n = _tok.partition("=")
         if _t not in _core:
             _rows.append((_t, _n.replace("_", " ") or _t, _c, _g))
+try:                                        # data-driven extension: all large US listings (see build_universe.py)
+    from pathlib import Path as _P
+    _x = pd.read_csv(_P(__file__).with_name("universe_extra.tsv"), sep="\t", dtype=str).dropna()
+    _seen = _core | {r[0] for r in _rows}
+    _rows += [tuple(r) for r in _x[["ticker", "name", "cls", "group"]].itertuples(index=False) if r[0] not in _seen]
+except Exception:
+    pass
 META = pd.DataFrame(U + _rows, columns=["ticker", "name", "cls", "group"]).drop_duplicates("ticker").set_index("ticker")
 META["core"] = META.index.isin(_core)      # core = cross-asset ETFs/futures/FX that drive pools, regime and the live view
 STOCK_CLASSES = ["US Stocks", "Europe Stocks", "Asia Stocks"]

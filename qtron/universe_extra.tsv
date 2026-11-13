@@ -1,0 +1,1040 @@
+ticker	name	cls	group
+AAPL	Apple Inc.	US Stocks	Technology
+NVDA	NVIDIA Corporation	US Stocks	Technology
+MSFT	Microsoft Corporation	US Stocks	Technology
+GOOGL	Alphabet Inc.	US Stocks	Communication
+AMZN	Amazon.com, Inc.	US Stocks	Cons. Discretionary
+TSM	Taiwan Semiconductor Manufac	US Stocks	Technology
+SPCX	Space Exploration Technologi	US Stocks	Industrials
+AVGO	Broadcom Inc.	US Stocks	Technology
+META	Meta Platforms, Inc.	US Stocks	Communication
+TSLA	Tesla, Inc.	US Stocks	Cons. Discretionary
+LLY	Eli Lilly and Company	US Stocks	Health Care
+BRK-B	Berkshire Hathaway Inc. New	US Stocks	Financials
+WMT	Walmart Inc.	US Stocks	Cons. Staples
+SKHY	SK hynix Inc.	US Stocks	Technology
+JPM	JP Morgan Chase & Co.	US Stocks	Financials
+AMD	Advanced Micro Devices, Inc.	US Stocks	Technology
+MU	Micron Technology, Inc.	US Stocks	Technology
+V	Visa Inc.	US Stocks	Financials
+XOM	ExxonMobil Holdings Corporat	US Stocks	Energy
+JNJ	Johnson & Johnson	US Stocks	Health Care
+MA	Mastercard Incorporated	US Stocks	Financials
+ASML	ASML Holding N.V. - New York	US Stocks	Technology
+ABBV	AbbVie Inc.	US Stocks	Health Care
+COST	Costco Wholesale Corporation	US Stocks	Cons. Staples
+CVX	Chevron Corporation	US Stocks	Energy
+KO	Coca-Cola Company (The)	US Stocks	Cons. Staples
+PLTR	Palantir Technologies Inc.	US Stocks	Technology
+PG	Procter & Gamble Company (Th	US Stocks	Cons. Staples
+ORCL	Oracle Corporation	US Stocks	Technology
+CSCO	Cisco Systems, Inc.	US Stocks	Technology
+UNH	UnitedHealth Group Incorpora	US Stocks	Health Care
+MRK	Merck & Company, Inc.	US Stocks	Health Care
+BAC	Bank of America Corporation	US Stocks	Financials
+HD	Home Depot, Inc. (The)	US Stocks	Cons. Discretionary
+GE	GE Aerospace	US Stocks	Industrials
+INTC	Intel Corporation	US Stocks	Technology
+PM	Philip Morris International 	US Stocks	Cons. Staples
+HSBC	HSBC Holdings, plc.	US Stocks	Financials
+NVS	Novartis AG	US Stocks	Health Care
+MS	Morgan Stanley	US Stocks	Financials
+AMAT	Applied Materials, Inc.	US Stocks	Technology
+AZN	AstraZeneca PLC	US Stocks	Health Care
+LRCX	Lam Research Corporation	US Stocks	Technology
+RY	Royal Bank Of Canada	US Stocks	Financials
+SHEL	Shell PLC	US Stocks	Energy
+TXN	Texas Instruments Incorporat	US Stocks	Technology
+CAT	Caterpillar, Inc.	US Stocks	Industrials
+SAP	SAP  SE	US Stocks	Technology
+RTX	RTX Corporation	US Stocks	Industrials
+PANW	Palo Alto Networks, Inc.	US Stocks	Technology
+GS	Goldman Sachs Group, Inc. (T	US Stocks	Financials
+TMO	Thermo Fisher Scientific Inc	US Stocks	Health Care
+WFC	Wells Fargo & Company	US Stocks	Financials
+NFLX	Netflix, Inc.	US Stocks	Communication
+AMGN	Amgen Inc.	US Stocks	Health Care
+TM	Toyota Motor Corporation	US Stocks	Cons. Discretionary
+ANET	Arista Networks, Inc.	US Stocks	Technology
+MUFG	Mitsubishi UFJ Financial Gro	US Stocks	Financials
+LIN	Linde plc	US Stocks	Materials
+IBM	International Business Machi	US Stocks	Technology
+BABA	Alibaba Group Holding Limite	US Stocks	Cons. Discretionary
+CRWD	CrowdStrike Holdings, Inc.	US Stocks	Technology
+DELL	Dell Technologies Inc.	US Stocks	Technology
+AXP	American Express Company	US Stocks	Financials
+GEV	GE Vernova Inc.	US Stocks	Industrials
+GILD	Gilead Sciences, Inc.	US Stocks	Health Care
+DIS	Walt Disney Company (The)	US Stocks	Communication
+C	Citigroup, Inc.	US Stocks	Financials
+ARM	Arm Holdings plc	US Stocks	Technology
+BHP	BHP Group Limited	US Stocks	Materials
+TD	Toronto Dominion Bank (The)	US Stocks	Financials
+TTE	TotalEnergies SE	US Stocks	Energy
+KLAC	KLA Corporation	US Stocks	Technology
+PEP	Pepsico, Inc.	US Stocks	Cons. Staples
+ADI	Analog Devices, Inc.	US Stocks	Technology
+MCD	McDonald's Corporation	US Stocks	Cons. Discretionary
+APH	Amphenol Corporation	US Stocks	Technology
+VZ	Verizon Communications Inc.	US Stocks	Communication
+SHOP	Shopify Inc.	US Stocks	Technology
+ABT	Abbott Laboratories	US Stocks	Health Care
+BLK	BlackRock, Inc.	US Stocks	Financials
+QCOM	QUALCOMM Incorporated	US Stocks	Technology
+NVO	Novo Nordisk A/S	US Stocks	Health Care
+DE	Deere & Company	US Stocks	Industrials
+TMUS	T-Mobile US, Inc.	US Stocks	Communication
+CRM	Salesforce, Inc.	US Stocks	Technology
+UNP	Union Pacific Corporation	US Stocks	Industrials
+WELL	Welltower Inc.	US Stocks	Real Estate
+NEE	NextEra Energy, Inc.	US Stocks	Utilities
+SAN	Banco Santander, S.A. Sponso	US Stocks	Financials
+COP	ConocoPhillips	US Stocks	Energy
+BUD	Anheuser-Busch Inbev SA Spon	US Stocks	Cons. Staples
+PFE	Pfizer, Inc.	US Stocks	Health Care
+DHR	Danaher Corporation	US Stocks	Health Care
+SCHW	Charles Schwab Corporation (	US Stocks	Financials
+SONY	Sony Group Corporation	US Stocks	Technology
+SMFG	Sumitomo Mitsui Financial Gr	US Stocks	Financials
+ISRG	Intuitive Surgical, Inc.	US Stocks	Health Care
+T	AT&T Inc.	US Stocks	Communication
+ACN	Accenture plc	US Stocks	Technology
+BX	Blackstone Inc.	US Stocks	Financials
+TJX	TJX Companies, Inc. (The)	US Stocks	Cons. Discretionary
+UBS	UBS Group AG Registered	US Stocks	Financials
+CB	Chubb Limited	US Stocks	Financials
+UL	Unilever PLC	US Stocks	Cons. Staples
+BBVA	Banco Bilbao Vizcaya Argenta	US Stocks	Financials
+UBER	Uber Technologies, Inc.	US Stocks	Technology
+MRVL	Marvell Technology, Inc.	US Stocks	Technology
+SCCO	Southern Copper Corporation	US Stocks	Materials
+IBKR	Interactive Brokers Group, I	US Stocks	Financials
+LMT	Lockheed Martin Corporation	US Stocks	Industrials
+VRTX	Vertex Pharmaceuticals Incor	US Stocks	Health Care
+SPGI	S&P Global Inc.	US Stocks	Financials
+ETN	Eaton Corporation, PLC	US Stocks	Industrials
+PGR	Progressive Corporation (The	US Stocks	Financials
+BA	Boeing Company (The)	US Stocks	Industrials
+APP	Applovin Corporation	US Stocks	Communication
+RIO	Rio Tinto Plc	US Stocks	Materials
+HDB	HDFC Bank Limited	US Stocks	Financials
+BTI	British American Tobacco  In	US Stocks	Cons. Staples
+MDT	Medtronic plc.	US Stocks	Health Care
+MO	Altria Group, Inc.	US Stocks	Cons. Staples
+BMY	Bristol-Myers Squibb Company	US Stocks	Health Care
+LOW	Lowe's Companies, Inc.	US Stocks	Cons. Discretionary
+MCK	McKesson Corporation	US Stocks	Health Care
+SPOT	Spotify Technology S.A.	US Stocks	Communication
+PLD	Prologis, Inc.	US Stocks	Real Estate
+MFG	Mizuho Financial Group, Inc.	US Stocks	Financials
+SNDK	Sandisk Corporation	US Stocks	Technology
+IBN	ICICI Bank Limited	US Stocks	Financials
+ADP	Automatic Data Processing, I	US Stocks	Technology
+SBUX	Starbucks Corporation	US Stocks	Cons. Discretionary
+STX	Seagate Technology Holdings 	US Stocks	Technology
+PH	Parker-Hannifin Corporation	US Stocks	Industrials
+BMO	Bank Of Montreal	US Stocks	Financials
+BKNG	Booking Holdings Inc. Common	US Stocks	Cons. Discretionary
+PBR	Petroleo Brasileiro S.A. Pet	US Stocks	Energy
+BP	BP p.l.c.	US Stocks	Energy
+COF	Capital One Financial Corpor	US Stocks	Financials
+SYK	Stryker Corporation	US Stocks	Health Care
+NEM	Newmont Corporation	US Stocks	Materials
+SNY	Sanofi	US Stocks	Health Care
+CME	CME Group Inc.	US Stocks	Financials
+CVS	CVS Health Corporation	US Stocks	Health Care
+BNS	Bank Nova Scotia Halifax Pfd	US Stocks	Financials
+MPC	Marathon Petroleum Corporati	US Stocks	Energy
+PDD	PDD Holdings Inc.	US Stocks	Cons. Discretionary
+ABNB	Airbnb, Inc.	US Stocks	Cons. Discretionary
+NET	Cloudflare, Inc.	US Stocks	Technology
+WDC	Western Digital Corporation	US Stocks	Technology
+PBR-A	Petroleo Brasileiro S.A. Pet	US Stocks	Energy
+MAR	Marriott International	US Stocks	Cons. Discretionary
+SO	Southern Company (The)	US Stocks	Utilities
+CVNA	Carvana Co.	US Stocks	Cons. Discretionary
+NOW	ServiceNow, Inc.	US Stocks	Technology
+ENB	Enbridge Inc	US Stocks	Energy
+VLO	Valero Energy Corporation	US Stocks	Energy
+CM	Canadian Imperial Bank of Co	US Stocks	Financials
+EQIX	Equinix, Inc.	US Stocks	Real Estate
+HCA	HCA Healthcare, Inc.	US Stocks	Health Care
+SNOW	Snowflake Inc.	US Stocks	Technology
+PSX	Phillips 66	US Stocks	Energy
+BNY	The Bank of New York Mellon 	US Stocks	Financials
+GSK	GSK plc	US Stocks	Health Care
+EQNR	Equinor ASA	US Stocks	Energy
+DUK	Duke Energy Corporation (Hol	US Stocks	Utilities
+CNQ	Canadian Natural Resources L	US Stocks	Energy
+ICE	Intercontinental Exchange In	US Stocks	Financials
+REGN	Regeneron Pharmaceuticals, I	US Stocks	Health Care
+MRSH	Marsh	US Stocks	Financials
+GD	General Dynamics Corporation	US Stocks	Industrials
+GLW	Corning Incorporated	US Stocks	Technology
+CEG	Constellation Energy Corpora	US Stocks	Utilities
+WM	Waste Management, Inc.	US Stocks	Industrials
+CSX	CSX Corporation	US Stocks	Industrials
+UPS	United Parcel Service, Inc.	US Stocks	Industrials
+MMM	3M Company	US Stocks	Industrials
+USB	U.S. Bancorp	US Stocks	Financials
+ADBE	Adobe Inc.	US Stocks	Technology
+ING	ING Group, N.V.	US Stocks	Financials
+FTNT	Fortinet, Inc.	US Stocks	Technology
+ELV	Elevance Health, Inc.	US Stocks	Health Care
+PNC	PNC Financial Services Group	US Stocks	Financials
+TT	Trane Technologies plc	US Stocks	Industrials
+BN	Brookfield Corporation	US Stocks	Financials
+INTU	Intuit Inc.	US Stocks	Technology
+EMR	Emerson Electric Company	US Stocks	Industrials
+MRNA	Moderna, Inc.	US Stocks	Health Care
+MNST	Monster Beverage Corporation	US Stocks	Cons. Staples
+WAT	Waters Corporation	US Stocks	Health Care
+AEM	Agnico Eagle Mines Limited	US Stocks	Materials
+PWR	Quanta Services, Inc.	US Stocks	Industrials
+CTAS	Cintas Corporation	US Stocks	Industrials
+KKR	KKR & Co. Inc.	US Stocks	Financials
+CMCSA	Comcast Corporation	US Stocks	Communication
+CDNS	Cadence Design Systems, Inc.	US Stocks	Technology
+AMT	American Tower Corporation (	US Stocks	Real Estate
+SPG	Simon Property Group, Inc.	US Stocks	Real Estate
+HWM	Howmet Aerospace Inc.	US Stocks	Industrials
+MSI	Motorola Solutions, Inc.	US Stocks	Technology
+MCO	Moody's Corporation	US Stocks	Financials
+SNPS	Synopsys, Inc.	US Stocks	Technology
+ECL	Ecolab Inc.	US Stocks	Materials
+RCL	Royal Caribbean Cruises Ltd.	US Stocks	Cons. Discretionary
+WMB	Williams Companies, Inc. (Th	US Stocks	Energy
+MDLZ	Mondelez International, Inc.	US Stocks	Cons. Staples
+SHW	Sherwin-Williams Company (Th	US Stocks	Materials
+FCX	Freeport-McMoRan, Inc.	US Stocks	Materials
+NGG	National Grid Transco, PLC N	US Stocks	Utilities
+JCI	Johnson Controls Internation	US Stocks	Industrials
+HLT	Hilton Worldwide Holdings In	US Stocks	Cons. Discretionary
+ITUB	Itau Unibanco Banco Holding 	US Stocks	Financials
+EPD	Enterprise Products Partners	US Stocks	Energy
+TRV	The Travelers Companies, Inc	US Stocks	Financials
+BAM	Brookfield Asset Management 	US Stocks	Financials
+EOG	EOG Resources, Inc.	US Stocks	Energy
+CP	Canadian Pacific Kansas City	US Stocks	Industrials
+ITW	Illinois Tool Works Inc.	US Stocks	Industrials
+E	ENI S.p.A.	US Stocks	Energy
+SU	Suncor Energy  Inc.	US Stocks	Energy
+CL	Colgate-Palmolive Company	US Stocks	Cons. Staples
+ASX	ASE Technology Holding Co., 	US Stocks	Technology
+NTES	NetEase, Inc.	US Stocks	Communication
+NOC	Northrop Grumman Corporation	US Stocks	Industrials
+VRT	Vertiv Holdings, LLC	US Stocks	Industrials
+CI	The Cigna Group	US Stocks	Health Care
+RSG	Republic Services, Inc.	US Stocks	Industrials
+CNI	Canadian National Railway Co	US Stocks	Industrials
+SLB	SLB Limited	US Stocks	Energy
+BCS	Barclays PLC	US Stocks	Financials
+AMX	America Movil, S.A.B. de C.V	US Stocks	Communication
+FDX	FedEx Corporation	US Stocks	Industrials
+MELI	MercadoLibre, Inc.	US Stocks	Cons. Discretionary
+DASH	DoorDash, Inc.	US Stocks	Cons. Discretionary
+ROST	Ross Stores, Inc.	US Stocks	Cons. Discretionary
+ORLY	O'Reilly Automotive, Inc.	US Stocks	Cons. Discretionary
+LYG	Lloyds Banking Group Plc	US Stocks	Financials
+NSC	Norfolk Southern Corporation	US Stocks	Industrials
+TGT	Target Corporation	US Stocks	Cons. Staples
+GM	General Motors Company	US Stocks	Cons. Discretionary
+MFC	Manulife Financial Corporati	US Stocks	Financials
+APO	Apollo Global Management, In	US Stocks	Financials
+AJG	Arthur J. Gallagher & Co.	US Stocks	Financials
+RACE	Ferrari N.V.	US Stocks	Cons. Discretionary
+AON	Aon plc	US Stocks	Financials
+KMI	Kinder Morgan, Inc.	US Stocks	Energy
+HON	Honeywell International Inc.	US Stocks	Industrials
+HOOD	Robinhood Markets, Inc.	US Stocks	Financials
+APD	Air Products and Chemicals, 	US Stocks	Materials
+RELX	RELX PLC PLC	US Stocks	Industrials
+AEP	American Electric Power Comp	US Stocks	Utilities
+URI	United Rentals, Inc.	US Stocks	Industrials
+GWW	W.W. Grainger, Inc.	US Stocks	Industrials
+DLR	Digital Realty Trust, Inc.	US Stocks	Real Estate
+TAK	Takeda Pharmaceutical Compan	US Stocks	Health Care
+COR	Cencora, Inc.	US Stocks	Health Care
+MPWR	Monolithic Power Systems, In	US Stocks	Technology
+DB	Deutsche Bank AG	US Stocks	Financials
+TRP	TC Energy Corporation	US Stocks	Energy
+KMB	Kimberly-Clark Corporation	US Stocks	Cons. Staples
+TDG	Transdigm Group Incorporated	US Stocks	Industrials
+DDOG	Datadog, Inc.	US Stocks	Technology
+NXPI	NXP Semiconductors N.V.	US Stocks	Technology
+ALL	Allstate Corporation (The)	US Stocks	Financials
+CAH	Cardinal Health, Inc.	US Stocks	Health Care
+BSX	Boston Scientific Corporatio	US Stocks	Health Care
+MET	MetLife, Inc.	US Stocks	Financials
+HPE	Hewlett Packard Enterprise C	US Stocks	Technology
+TRGP	Targa Resources, Inc.	US Stocks	Energy
+FAST	Fastenal Company	US Stocks	Industrials
+LNG	Cheniere Energy, Inc.	US Stocks	Energy
+NU	Nu Holdings Ltd.	US Stocks	Financials
+AFL	AFLAC Incorporated	US Stocks	Financials
+NWG	NatWest Group plc	US Stocks	Financials
+CRH	CRH PLC	US Stocks	Materials
+PSA	Public Storage	US Stocks	Real Estate
+CMI	Cummins Inc.	US Stocks	Industrials
+TEL	TE Connectivity plc	US Stocks	Technology
+EW	Edwards Lifesciences Corpora	US Stocks	Health Care
+B	Barrick Mining Corporation	US Stocks	Materials
+ARGX	argenx SE	US Stocks	Health Care
+NDAQ	Nasdaq, Inc.	US Stocks	Financials
+WPM	Wheaton Precious Metals Corp	US Stocks	Materials
+TFC	Truist Financial Corporation	US Stocks	Financials
+BDX	Becton, Dickinson and Compan	US Stocks	Health Care
+D	Dominion Energy, Inc.	US Stocks	Utilities
+OXY	Occidental Petroleum Corpora	US Stocks	Energy
+MPLX	MPLX LP	US Stocks	Energy
+DAL	Delta Air Lines, Inc.	US Stocks	Industrials
+NUE	Nucor Corporation	US Stocks	Materials
+OKE	ONEOK, Inc.	US Stocks	Energy
+NKE	Nike, Inc.	US Stocks	Cons. Discretionary
+DEO	Diageo plc	US Stocks	Cons. Staples
+BE	Bloom Energy Corporation	US Stocks	Industrials
+PCAR	PACCAR Inc.	US Stocks	Industrials
+O	Realty Income Corporation	US Stocks	Real Estate
+AME	AMETEK, Inc.	US Stocks	Industrials
+IDXX	IDEXX Laboratories, Inc.	US Stocks	Health Care
+ADSK	Autodesk, Inc.	US Stocks	Technology
+GRMN	Garmin Ltd.	US Stocks	Technology
+HUM	Humana Inc.	US Stocks	Health Care
+LITE	Lumentum Holdings Inc.	US Stocks	Technology
+MDLN	Medline Inc.	US Stocks	Health Care
+ETR	Entergy Corporation	US Stocks	Utilities
+EBAY	eBay Inc.	US Stocks	Cons. Discretionary
+DVN	Devon Energy Corporation	US Stocks	Energy
+AZO	AutoZone, Inc.	US Stocks	Cons. Discretionary
+HONA	Honeywell Aerospace Inc.	US Stocks	Industrials
+XEL	Xcel Energy Inc.	US Stocks	Utilities
+CVE	Cenovus Energy Inc	US Stocks	Energy
+SRE	DBA Sempra	US Stocks	Utilities
+CCEP	Coca-Cola Europacific Partne	US Stocks	Cons. Staples
+FANG	Diamondback Energy, Inc.	US Stocks	Energy
+TEVA	Teva Pharmaceutical Industri	US Stocks	Health Care
+XYZ	Block, Inc.	US Stocks	Technology
+KEYS	Keysight Technologies Inc.	US Stocks	Technology
+LHX	L3Harris Technologies, Inc.	US Stocks	Industrials
+WAB	Westinghouse Air Brake Techn	US Stocks	Industrials
+INFY	Infosys Limited	US Stocks	Technology
+VMRK	Vivmark Residential	US Stocks	Real Estate
+FERG	Ferguson Enterprises Inc.	US Stocks	Industrials
+KDP	Keurig Dr Pepper Inc.	US Stocks	Cons. Staples
+PYPL	PayPal Holdings, Inc.	US Stocks	Financials
+A	Agilent Technologies, Inc.	US Stocks	Health Care
+FITB	Fifth Third Bancorp	US Stocks	Financials
+VEEV	Veeva Systems Inc.	US Stocks	Health Care
+BKR	Baker Hughes Company	US Stocks	Energy
+WCN	Waste Connections, Inc.	US Stocks	Industrials
+VYLR	Vylor Inc.	US Stocks	Financials
+ROP	Roper Technologies, Inc.	US Stocks	Technology
+FNV	Franco-Nevada Corporation	US Stocks	Materials
+VALE	VALE S.A.	US Stocks	Materials
+ONC	BeOne Medicines Ltd.	US Stocks	Health Care
+F	Ford Motor Company	US Stocks	Cons. Discretionary
+HEI	Heico Corporation	US Stocks	Industrials
+EXC	Exelon Corporation	US Stocks	Utilities
+TRI	Thomson Reuters Corp	US Stocks	Industrials
+MSTR	Strategy Inc	US Stocks	Technology
+WDAY	Workday, Inc.	US Stocks	Technology
+MT	Arcelor Mittal NY Registry S	US Stocks	Materials
+STT	State Street Corporation	US Stocks	Financials
+MSCI	MSCI Inc.	US Stocks	Financials
+VTR	Ventas, Inc.	US Stocks	Real Estate
+NTRA	Natera, Inc.	US Stocks	Health Care
+SE	Sea Limited	US Stocks	Cons. Discretionary
+NOK	Nokia Corporation Sponsored	US Stocks	Technology
+AMP	Ameriprise Financial, Inc.	US Stocks	Financials
+FMX	Fomento Economico Mexicano S	US Stocks	Cons. Staples
+ED	Consolidated Edison, Inc.	US Stocks	Utilities
+ROK	Rockwell Automation, Inc.	US Stocks	Industrials
+VST	Vistra Corp.	US Stocks	Utilities
+CMG	Chipotle Mexican Grill, Inc.	US Stocks	Cons. Discretionary
+HMC	Honda Motor Company, Ltd.	US Stocks	Cons. Discretionary
+CARR	Carrier Global Corporation	US Stocks	Industrials
+ARES	Ares Management Corporation	US Stocks	Financials
+FER	Ferrovial N.V.	US Stocks	Industrials
+IQV	IQVIA Holdings, Inc.	US Stocks	Health Care
+AU	AngloGold Ashanti PLC	US Stocks	Materials
+YUM	Yum! Brands, Inc.	US Stocks	Cons. Discretionary
+COHR	Coherent Corp.	US Stocks	Technology
+AIG	American International Group	US Stocks	Financials
+TTWO	Take-Two Interactive Softwar	US Stocks	Communication
+ABEV	Ambev S.A.	US Stocks	Cons. Staples
+LYV	Live Nation Entertainment, I	US Stocks	Communication
+PRU	Prudential Financial, Inc.	US Stocks	Financials
+KR	Kroger Company (The)	US Stocks	Cons. Staples
+STM	STMicroelectronics N.V.	US Stocks	Technology
+RKLB	Rocket Lab Corporation	US Stocks	Industrials
+PAYX	Paychex, Inc.	US Stocks	Technology
+KB	KB Financial Group Inc	US Stocks	Financials
+EL	Estee Lauder Companies, Inc.	US Stocks	Cons. Staples
+UI	Ubiquiti Inc.	US Stocks	Technology
+SLF	Sun Life Financial Inc.	US Stocks	Financials
+HLN	Haleon plc	US Stocks	Health Care
+VIK	Viking Holdings Ltd	US Stocks	Cons. Discretionary
+CIEN	Ciena Corporation	US Stocks	Technology
+RPRX	Royalty Pharma plc	US Stocks	Health Care
+DHI	D.R. Horton, Inc.	US Stocks	Cons. Discretionary
+CCL	Carnival Corporation Ltd.	US Stocks	Cons. Discretionary
+RKT	Rocket Companies, Inc.	US Stocks	Financials
+TER	Teradyne, Inc.	US Stocks	Technology
+ALAB	Astera Labs, Inc.	US Stocks	Technology
+FOXA	Fox Corporation	US Stocks	Communication
+FIX	Comfort Systems USA, Inc.	US Stocks	Industrials
+CHT	Chunghwa Telecom Co., Ltd.	US Stocks	Communication
+WEC	WEC Energy Group, Inc.	US Stocks	Utilities
+UMC	United Microelectronics Corp	US Stocks	Technology
+CCI	Crown Castle Inc.	US Stocks	Real Estate
+CBRE	CBRE Group Inc	US Stocks	Real Estate
+TEAM	Atlassian Corporation	US Stocks	Technology
+SKYD	Skydance Corporation	US Stocks	Communication
+SYY	Sysco Corporation	US Stocks	Cons. Staples
+BSBR	Banco Santander Brasil SA	US Stocks	Financials
+PEG	Public Service Enterprise Gr	US Stocks	Utilities
+BIIB	Biogen Inc.	US Stocks	Health Care
+JD	JD.com, Inc.	US Stocks	Cons. Discretionary
+GEHC	GE HealthCare Technologies I	US Stocks	Health Care
+RVMD	Revolution Medicines, Inc.	US Stocks	Health Care
+IX	ORIX Corporation	US Stocks	Financials
+TKO	TKO Group Holdings, Inc.	US Stocks	Communication
+HIG	The Hartford Insurance Group	US Stocks	Financials
+MLM	Martin Marietta Materials, I	US Stocks	Materials
+UAL	United Airlines Holdings, In	US Stocks	Industrials
+P	Everpure, Inc.	US Stocks	Technology
+ODFL	Old Dominion Freight Line, I	US Stocks	Industrials
+NTAP	NetApp, Inc.	US Stocks	Technology
+VMC	Vulcan Materials Company (Ho	US Stocks	Materials
+ACGL	Arch Capital Group Ltd.	US Stocks	Financials
+RBLX	Roblox Corporation	US Stocks	Communication
+VOD	Vodafone Group Plc	US Stocks	Communication
+HEI-A	Heico Corporation	US Stocks	Industrials
+ALC	Alcon Inc.	US Stocks	Health Care
+CNC	Centene Corporation	US Stocks	Health Care
+HSY	The Hershey Company	US Stocks	Cons. Staples
+QSR	Restaurant Brands Internatio	US Stocks	Cons. Discretionary
+EXR	Extra Space Storage Inc	US Stocks	Real Estate
+ADM	Archer-Daniels-Midland Compa	US Stocks	Cons. Staples
+MTD	Mettler-Toledo International	US Stocks	Health Care
+ERIC	Ericsson	US Stocks	Technology
+COIN	Coinbase Global, Inc.	US Stocks	Financials
+ZTS	Zoetis Inc.	US Stocks	Health Care
+NTR	Nutrien Ltd.	US Stocks	Materials
+FISV	Fiserv, Inc.	US Stocks	Technology
+RMD	ResMed Inc.	US Stocks	Health Care
+IRM	Iron Mountain Incorporated (	US Stocks	Real Estate
+SUNB	Sunbelt Rentals Holdings, In	US Stocks	Industrials
+MCHP	Microchip Technology Incorpo	US Stocks	Technology
+VG	Venture Global, Inc.	US Stocks	Energy
+ESLT	Elbit Systems Ltd.	US Stocks	Industrials
+EQT	EQT Corporation	US Stocks	Energy
+TWLO	Twilio Inc.	US Stocks	Technology
+STLD	Steel Dynamics, Inc.	US Stocks	Materials
+IR	Ingersoll Rand Inc.	US Stocks	Industrials
+RJF	Raymond James Financial, Inc	US Stocks	Financials
+NTRS	Northern Trust Corporation	US Stocks	Financials
+OKTA	Okta, Inc.	US Stocks	Technology
+NBIS	Nebius Group N.V.	US Stocks	Communication
+SN	SharkNinja, Inc.	US Stocks	Cons. Discretionary
+HBAN	Huntington Bancshares Incorp	US Stocks	Financials
+GMAB	Genmab A/S	US Stocks	Health Care
+GFI	Gold Fields Limited	US Stocks	Materials
+EC	Ecopetrol S.A.	US Stocks	Energy
+ZS	Zscaler, Inc.	US Stocks	Technology
+AEE	Ameren Corporation	US Stocks	Utilities
+MTB	M&T Bank Corporation	US Stocks	Financials
+ILMN	Illumina, Inc.	US Stocks	Health Care
+PUK	Prudential Public Limited Co	US Stocks	Financials
+BIP	Brookfield Infrastructure Pa	US Stocks	Utilities
+DXCM	DexCom, Inc.	US Stocks	Health Care
+CCJ	Cameco Corporation	US Stocks	Energy
+TS	Tenaris S.A.	US Stocks	Energy
+SHG	Shinhan Financial Group Co L	US Stocks	Financials
+WTW	Willis Towers Watson Public 	US Stocks	Financials
+FTS	Fortis Inc.	US Stocks	Utilities
+EXPE	Expedia Group, Inc.	US Stocks	Cons. Discretionary
+CLS	Celestica, Inc.	US Stocks	Technology
+LH	Labcorp Holdings Inc.	US Stocks	Health Care
+RYAAY	Ryanair Holdings plc	US Stocks	Industrials
+CQP	Cheniere Energy Partners, LP	US Stocks	Energy
+ATO	Atmos Energy Corporation	US Stocks	Utilities
+WSM	Williams-Sonoma, Inc.	US Stocks	Cons. Discretionary
+AWK	American Water Works Company	US Stocks	Utilities
+KHC	The Kraft Heinz Company	US Stocks	Cons. Staples
+TECK	Teck Resources Ltd	US Stocks	Materials
+DG	Dollar General Corporation	US Stocks	Cons. Staples
+CPAY	Corpay, Inc.	US Stocks	Technology
+CPRT	Copart, Inc.	US Stocks	Industrials
+PHG	Koninklijke Philips N.V. NY 	US Stocks	Health Care
+TDY	Teledyne Technologies Incorp	US Stocks	Technology
+CRWV	CoreWeave, Inc.	US Stocks	Technology
+OTIS	Otis Worldwide Corporation	US Stocks	Industrials
+BAP	Credicorp Ltd.	US Stocks	Financials
+PBA	Pembina Pipeline Corp.	US Stocks	Energy
+ZM	Zoom Communications, Inc.	US Stocks	Technology
+CINF	Cincinnati Financial Corpora	US Stocks	Financials
+ECHO	EchoStar Corporation	US Stocks	Communication
+WST	West Pharmaceutical Services	US Stocks	Health Care
+DTE	DTE Energy Company	US Stocks	Utilities
+PCG	Pacific Gas & Electric Co.	US Stocks	Utilities
+EME	EMCOR Group, Inc.	US Stocks	Industrials
+VLTO	Veralto Corp	US Stocks	Industrials
+WRB	W.R. Berkley Corporation	US Stocks	Financials
+BBD	Banco Bradesco Sa	US Stocks	Financials
+TW	Tradeweb Markets Inc.	US Stocks	Financials
+ROIV	Roivant Sciences Ltd.	US Stocks	Health Care
+DGX	Quest Diagnostics Incorporat	US Stocks	Health Care
+NMR	Nomura Holdings Inc	US Stocks	Financials
+CTSH	Cognizant Technology Solutio	US Stocks	Technology
+ULTA	Ulta Beauty, Inc.	US Stocks	Cons. Discretionary
+VRSN	VeriSign, Inc.	US Stocks	Technology
+DOV	Dover Corporation	US Stocks	Industrials
+HAL	Halliburton Company	US Stocks	Energy
+FLEX	Flex Ltd.	US Stocks	Technology
+FWONK	Liberty Media Corporation - 	US Stocks	Communication
+ON	ON Semiconductor Corporation	US Stocks	Technology
+VICI	VICI Properties Inc.	US Stocks	Real Estate
+TCOM	Trip.com Group Limited	US Stocks	Cons. Discretionary
+CFG	Citizens Financial Group, In	US Stocks	Financials
+CNP	CenterPoint Energy, Inc (Hol	US Stocks	Utilities
+CPNG	Coupang, Inc.	US Stocks	Cons. Discretionary
+PPG	PPG Industries, Inc.	US Stocks	Materials
+BSP	Bending Spoons S.p.A.	US Stocks	Technology
+FE	FirstEnergy Corp.	US Stocks	Utilities
+ES	Eversource Energy (D/B/A)	US Stocks	Utilities
+VRSK	Verisk Analytics, Inc.	US Stocks	Industrials
+PPL	PPL Corporation	US Stocks	Utilities
+AER	AerCap Holdings N.V.	US Stocks	Industrials
+CHD	Church & Dwight Company, Inc	US Stocks	Cons. Staples
+FWONA	Liberty Media Corporation - 	US Stocks	Communication
+INSM	Insmed Incorporated	US Stocks	Health Care
+BIDU	Baidu, Inc.	US Stocks	Communication
+HPQ	HP Inc.	US Stocks	Technology
+BBDO	Banco Bradesco Sa	US Stocks	Financials
+IHG	Intercontinental Hotels Grou	US Stocks	Cons. Discretionary
+CASY	Caseys General Stores, Inc.	US Stocks	Cons. Discretionary
+JBL	Jabil Inc.	US Stocks	Technology
+CBRS	Cerebras Systems Inc.	US Stocks	Technology
+DLTR	Dollar Tree, Inc.	US Stocks	Cons. Staples
+TPR	Tapestry, Inc.	US Stocks	Cons. Discretionary
+DRI	Darden Restaurants, Inc.	US Stocks	Cons. Discretionary
+STE	STERIS plc (Ireland)	US Stocks	Health Care
+FCNCA	First Citizens BancShares, I	US Stocks	Financials
+FTI	TechnipFMC plc	US Stocks	Energy
+AXON	Axon Enterprise, Inc.	US Stocks	Industrials
+UTHR	United Therapeutics Corporat	US Stocks	Health Care
+EXPD	Expeditors International of 	US Stocks	Industrials
+LVS	Las Vegas Sands Corp.	US Stocks	Cons. Discretionary
+ATI	ATI Inc.	US Stocks	Industrials
+CHTR	Charter Communications, Inc.	US Stocks	Communication
+INCY	Incyte Corporation	US Stocks	Health Care
+CRDO	Credo Technology Group Holdi	US Stocks	Technology
+Q	Qnity Electronics, Inc.	US Stocks	Technology
+STZ	Constellation Brands, Inc.	US Stocks	Cons. Staples
+KGC	Kinross Gold Corporation	US Stocks	Materials
+RF	Regions Financial Corporatio	US Stocks	Financials
+IOT	Samsara Inc.	US Stocks	Technology
+GPN	Global Payments Inc.	US Stocks	Industrials
+MKL	Markel Group Inc.	US Stocks	Financials
+OMC	Omnicom Group Inc.	US Stocks	Communication
+PFG	Principal Financial Group In	US Stocks	Financials
+ROKU	Roku, Inc.	US Stocks	Communication
+DOW	Dow Inc.	US Stocks	Materials
+VTRS	Viatris Inc.	US Stocks	Health Care
+BRO	Brown & Brown, Inc.	US Stocks	Financials
+PHM	PulteGroup, Inc.	US Stocks	Cons. Discretionary
+U	Unity Software Inc.	US Stocks	Technology
+USFD	US Foods Holding Corp.	US Stocks	Cons. Staples
+ARXS	Arxis, Inc.	US Stocks	Industrials
+EIX	Edison International	US Stocks	Utilities
+TROW	T. Rowe Price Group, Inc.	US Stocks	Financials
+GFS	GlobalFoundries Inc.	US Stocks	Technology
+HUBB	Hubbell Inc	US Stocks	Industrials
+RL	Ralph Lauren Corporation	US Stocks	Cons. Discretionary
+LPLA	LPL Financial Holdings Inc.	US Stocks	Financials
+RBRK	Rubrik, Inc.	US Stocks	Technology
+THC	Tenet Healthcare Corporation	US Stocks	Health Care
+KEY	KeyCorp	US Stocks	Financials
+L	Loews Corporation	US Stocks	Financials
+SYF	Synchrony Financial	US Stocks	Financials
+ENTG	Entegris, Inc.	US Stocks	Technology
+XPO	XPO, Inc.	US Stocks	Industrials
+PKG	Packaging Corporation of Ame	US Stocks	Cons. Discretionary
+LUV	Southwest Airlines Company	US Stocks	Industrials
+SW	Smurfit WestRock plc	US Stocks	Cons. Discretionary
+AFRM	Affirm Holdings, Inc.	US Stocks	Financials
+NI	NiSource Inc	US Stocks	Utilities
+ALNY	Alnylam Pharmaceuticals, Inc	US Stocks	Health Care
+EFX	Equifax, Inc.	US Stocks	Industrials
+CMS	CMS Energy Corporation	US Stocks	Utilities
+BBY	Best Buy Co., Inc.	US Stocks	Cons. Discretionary
+RS	Reliance, Inc.	US Stocks	Materials
+BR	Broadridge Financial Solutio	US Stocks	Technology
+AMRZ	Amrize Ltd	US Stocks	Materials
+JBHT	J.B. Hunt Transport Services	US Stocks	Industrials
+RGLD	Royal Gold, Inc.	US Stocks	Materials
+XYL	Xylem Inc.	US Stocks	Industrials
+CDW	CDW Corporation	US Stocks	Technology
+PTC	PTC Inc.	US Stocks	Technology
+BNTX	BioNTech SE	US Stocks	Health Care
+CIB	Grupo Cibest S.A.	US Stocks	Financials
+SWKS	Skyworks Solutions, Inc.	US Stocks	Technology
+WIT	Wipro Limited	US Stocks	Technology
+LYB	LyondellBasell Industries NV	US Stocks	Materials
+EVRG	Evergy, Inc.	US Stocks	Utilities
+GH	Guardant Health, Inc.	US Stocks	Health Care
+TSN	Tyson Foods, Inc.	US Stocks	Cons. Staples
+EXE	Expand Energy Corporation	US Stocks	Energy
+DD	DuPont de Nemours, Inc.	US Stocks	Materials
+NRG	NRG Energy, Inc.	US Stocks	Utilities
+AMCR	Amcor plc	US Stocks	Cons. Discretionary
+TOST	Toast, Inc.	US Stocks	Technology
+FTV	Fortive Corporation	US Stocks	Technology
+IFF	International Flavors & Frag	US Stocks	Materials
+SOFI	SoFi Technologies, Inc.	US Stocks	Financials
+TPL	Texas Pacific Land Corporati	US Stocks	Energy
+BCE	BCE, Inc.	US Stocks	Communication
+LEN	Lennar Corporation	US Stocks	Cons. Discretionary
+FDXF	FedEx Freight Holding Compan	US Stocks	Industrials
+BCH	Banco De Chile	US Stocks	Financials
+SBAC	SBA Communications Corporati	US Stocks	Real Estate
+BEKE	KE Holdings Inc	US Stocks	Real Estate
+WWD	Woodward, Inc.	US Stocks	Industrials
+BG	Bunge Limited	US Stocks	Cons. Staples
+ZBH	Zimmer Biomet Holdings, Inc.	US Stocks	Health Care
+LEN-B	Lennar Corporation	US Stocks	Cons. Discretionary
+PR	Permian Resources Corporatio	US Stocks	Energy
+RDDT	Reddit, Inc.	US Stocks	Communication
+VIV	Telefonica Brasil S.A.	US Stocks	Communication
+CNH	CNH Industrial N.V.	US Stocks	Industrials
+LNT	Alliant Energy Corporation	US Stocks	Utilities
+SNA	Snap-On Incorporated	US Stocks	Industrials
+SNX	TD SYNNEX Corporation	US Stocks	Technology
+ESS	Essex Property Trust, Inc.	US Stocks	Real Estate
+TSCO	Tractor Supply Company	US Stocks	Cons. Discretionary
+ITT	ITT Inc.	US Stocks	Industrials
+SSNC	SS&C Technologies Holdings, 	US Stocks	Technology
+GFL	GFL Environmental Inc. Subor	US Stocks	Industrials
+ROL	Rollins, Inc.	US Stocks	Cons. Discretionary
+J	Jacobs Solutions Inc.	US Stocks	Industrials
+FTAI	FTAI Aviation Ltd.	US Stocks	Industrials
+APG	APi Group Corporation	US Stocks	Industrials
+BEN	Franklin Templeton, Inc.	US Stocks	Financials
+NVT	nVent Electric plc	US Stocks	Industrials
+MEDP	Medpace Holdings, Inc.	US Stocks	Health Care
+FSLR	First Solar, Inc.	US Stocks	Technology
+CF	CF Industries Holdings, Inc.	US Stocks	Materials
+GIS	General Mills, Inc.	US Stocks	Cons. Staples
+RIVN	Rivian Automotive, Inc.	US Stocks	Cons. Discretionary
+NDSN	Nordson Corporation	US Stocks	Industrials
+ASND	Ascendis Pharma A/S	US Stocks	Health Care
+IP	International Paper Company	US Stocks	Cons. Discretionary
+GEN	Gen Digital Inc.	US Stocks	Technology
+PS	Pershing Square Inc.	US Stocks	Financials
+RCI	Rogers Communication, Inc.	US Stocks	Communication
+EWBC	East West Bancorp, Inc.	US Stocks	Financials
+RGA	Reinsurance Group of America	US Stocks	Financials
+MTSI	MACOM Technology Solutions H	US Stocks	Technology
+HST	Host Hotels & Resorts, Inc.	US Stocks	Real Estate
+FFIV	F5, Inc.	US Stocks	Technology
+SMCI	Super Micro Computer, Inc.	US Stocks	Technology
+WF	Woori Financial Group Inc.	US Stocks	Financials
+OVV	Ovintiv Inc. (DE)	US Stocks	Energy
+PFGC	Performance Food Group Compa	US Stocks	Cons. Staples
+AS	Amer Sports, Inc.	US Stocks	Cons. Discretionary
+H	Hyatt Hotels Corporation	US Stocks	Cons. Discretionary
+IEX	IDEX Corporation	US Stocks	Industrials
+WES	Western Midstream Partners, 	US Stocks	Energy
+SBS	Companhia de saneamento Basi	US Stocks	Utilities
+RBA	RB Global, Inc.	US Stocks	Industrials
+RVTY	Revvity, Inc.	US Stocks	Health Care
+PAA	Plains All American Pipeline	US Stocks	Energy
+DINO	HF Sinclair Corporation	US Stocks	Energy
+CW	Curtiss-Wright Corporation	US Stocks	Industrials
+YUMC	Yum China Holdings, Inc.	US Stocks	Cons. Discretionary
+NBIX	Neurocrine Biosciences, Inc.	US Stocks	Health Care
+KSPI	Joint Stock Company Kaspi.kz	US Stocks	Technology
+GPC	Genuine Parts Company	US Stocks	Cons. Discretionary
+KIM	Kimco Realty Corporation (HC	US Stocks	Real Estate
+EXEL	Exelixis, Inc.	US Stocks	Health Care
+HAS	Hasbro, Inc.	US Stocks	Cons. Discretionary
+BALL	Ball Corporation	US Stocks	Cons. Discretionary
+WMG	Warner Music Group Corp.	US Stocks	Communication
+TYL	Tyler Technologies, Inc.	US Stocks	Technology
+SWK	Stanley Black & Decker, Inc.	US Stocks	Industrials
+GIB	CGI Inc.	US Stocks	Technology
+TSEM	Tower Semiconductor Ltd.	US Stocks	Technology
+JLL	Jones Lang LaSalle Incorpora	US Stocks	Real Estate
+NTNX	Nutanix, Inc.	US Stocks	Technology
+LAMR	Lamar Advertising Company	US Stocks	Real Estate
+TLN	Talen Energy Corporation	US Stocks	Utilities
+CRL	Charles River Laboratories I	US Stocks	Health Care
+MAS	Masco Corporation	US Stocks	Industrials
+APA	APA Corporation	US Stocks	Energy
+ALLE	Allegion plc	US Stocks	Industrials
+ULS	UL Solutions Inc.	US Stocks	Industrials
+JHX	James Hardie Industries plc.	US Stocks	Materials
+CRCL	Circle Internet Group, Inc.	US Stocks	Financials
+MGA	Magna International, Inc.	US Stocks	Cons. Discretionary
+LSCC	Lattice Semiconductor Corpor	US Stocks	Technology
+CRBG	Corebridge Financial Inc.	US Stocks	Financials
+LDOS	Leidos Holdings, Inc.	US Stocks	Technology
+HTHT	H World Group Limited	US Stocks	Cons. Discretionary
+AIZ	Assurant, Inc.	US Stocks	Financials
+EG	Everest Group, Ltd.	US Stocks	Financials
+EMA	Emera Incorporated	US Stocks	Utilities
+CHRW	C.H. Robinson Worldwide, Inc	US Stocks	Industrials
+WCC	WESCO International, Inc.	US Stocks	Industrials
+JAZZ	Jazz Pharmaceuticals plc	US Stocks	Health Care
+CLH	Clean Harbors, Inc.	US Stocks	Industrials
+NVR	NVR, Inc.	US Stocks	Cons. Discretionary
+INVH	Invitation Homes Inc.	US Stocks	Real Estate
+TRU	TransUnion	US Stocks	Financials
+PAAS	Pan American Silver Corp.	US Stocks	Materials
+RBC	RBC Bearings Incorporated	US Stocks	Industrials
+LECO	Lincoln Electric Holdings, I	US Stocks	Industrials
+FICO	Fair Isaac Corporation	US Stocks	Technology
+BBIO	BridgeBio Pharma, Inc.	US Stocks	Health Care
+CSL	Carlisle Companies Incorpora	US Stocks	Industrials
+SQM	Sociedad Quimica y Minera S.	US Stocks	Materials
+W	Wayfair Inc.	US Stocks	Cons. Discretionary
+BSAC	Banco Santander - Chile	US Stocks	Financials
+BURL	Burlington Stores, Inc.	US Stocks	Cons. Discretionary
+CX	Cemex, S.A.B. de C.V. Sponso	US Stocks	Materials
+PNFP	Pinnacle Financial Partners,	US Stocks	Financials
+DOCU	DocuSign, Inc.	US Stocks	Technology
+ZBRA	Zebra Technologies Corporati	US Stocks	Technology
+PKX	POSCO Holdings Inc.	US Stocks	Materials
+ZTO	ZTO Express (Cayman) Inc.	US Stocks	Industrials
+FIS	Fidelity National Informatio	US Stocks	Technology
+CHKP	Check Point Software Technol	US Stocks	Technology
+SOLV	Solventum Corporation	US Stocks	Health Care
+WPC	W. P. Carey Inc. REIT	US Stocks	Real Estate
+MANH	Manhattan Associates, Inc.	US Stocks	Technology
+OHI	Omega Healthcare Investors, 	US Stocks	Real Estate
+EQH	Equitable Holdings, Inc.	US Stocks	Financials
+WY	Weyerhaeuser Company	US Stocks	Real Estate
+GKOS	Glaukos Corporation	US Stocks	Health Care
+YPF	YPF Sociedad Anonima	US Stocks	Energy
+SUI	Sun Communities, Inc.	US Stocks	Real Estate
+TME	Tencent Music Entertainment 	US Stocks	Communication
+ICLR	ICON plc	US Stocks	Health Care
+MTZ	MasTec, Inc.	US Stocks	Industrials
+LOGI	Logitech International S.A. 	US Stocks	Technology
+MKSI	MKS Inc.	US Stocks	Technology
+NWSA	News Corporation	US Stocks	Communication
+NXT	Nextpower Inc.	US Stocks	Technology
+DOC	Healthpeak Properties, Inc.	US Stocks	Real Estate
+BF-A	Brown Forman Inc	US Stocks	Cons. Staples
+CRS	Carpenter Technology Corpora	US Stocks	Industrials
+CDE	Coeur Mining, Inc.	US Stocks	Materials
+ERIE	Erie Indemnity Company	US Stocks	Financials
+RNR	RenaissanceRe Holdings Ltd.	US Stocks	Financials
+REG	Regency Centers Corporation	US Stocks	Real Estate
+TXT	Textron Inc.	US Stocks	Industrials
+AVY	Avery Dennison Corporation	US Stocks	Cons. Discretionary
+FROG	JFrog Ltd.	US Stocks	Technology
+BTSG	BrightSpring Health Services	US Stocks	Health Care
+FLUT	Flutter Entertainment plc	US Stocks	Cons. Discretionary
+SJM	The J.M. Smucker Company	US Stocks	Cons. Staples
+CACI	CACI International, Inc.	US Stocks	Technology
+ARMK	Aramark	US Stocks	Industrials
+COKE	Coca-Cola Consolidated, Inc.	US Stocks	Cons. Staples
+BF-B	Brown Forman Inc	US Stocks	Cons. Staples
+PAC	Grupo Aeroportuario Del Paci	US Stocks	Industrials
+BJ	BJ's Wholesale Club Holdings	US Stocks	Cons. Staples
+CG	The Carlyle Group Inc.	US Stocks	Financials
+MAA	Mid-America Apartment Commun	US Stocks	Real Estate
+NLY	Annaly Capital Management In	US Stocks	Real Estate
+EMBJ	Embraer S.A.	US Stocks	Industrials
+SGI	Somnigroup International Inc	US Stocks	Cons. Discretionary
+PAG	Penske Automotive Group, Inc	US Stocks	Cons. Discretionary
+CART	Maplebear Inc.	US Stocks	Cons. Discretionary
+PHYS	"""Sprott Physical Gold Trust"""	US Stocks	Financials
+GDDY	GoDaddy Inc.	US Stocks	Technology
+ARCC	Ares Capital Corporation	US Stocks	Financials
+EHC	Encompass Health Corporation	US Stocks	Health Care
+TOL	Toll Brothers, Inc.	US Stocks	Cons. Discretionary
+FIVE	Five Below, Inc.	US Stocks	Cons. Discretionary
+LTM	LATAM Airlines Group S.A.	US Stocks	Industrials
+TU	Telus Corporation	US Stocks	Communication
+IONQ	IonQ, Inc.	US Stocks	Technology
+BSY	Bentley Systems, Incorporate	US Stocks	Technology
+AHR	American Healthcare REIT, In	US Stocks	Real Estate
+ELAN	Elanco Animal Health Incorpo	US Stocks	Health Care
+BAX	Baxter International Inc.	US Stocks	Health Care
+AFG	American Financial Group, In	US Stocks	Financials
+SKM	SK Telecom Co., Ltd.	US Stocks	Communication
+CLX	Clorox Company (The)	US Stocks	Cons. Staples
+UDR	UDR, Inc.	US Stocks	Real Estate
+AMH	American Homes 4 Rent	US Stocks	Real Estate
+GWRE	Guidewire Software, Inc.	US Stocks	Technology
+DKS	Dick's Sporting Goods Inc	US Stocks	Cons. Discretionary
+RPM	RPM International Inc.	US Stocks	Materials
+TIGO	Millicom International Cellu	US Stocks	Communication
+CNA	CNA Financial Corporation	US Stocks	Financials
+GME	GameStop Corporation	US Stocks	Cons. Discretionary
+QXO	QXO, Inc.	US Stocks	Industrials
+KEP	Korea Electric Power Corpora	US Stocks	Utilities
+CCK	Crown Holdings, Inc.	US Stocks	Cons. Discretionary
+SNN	Smith & Nephew SNATS, Inc.	US Stocks	Health Care
+GRAB	Grab Holdings Limited	US Stocks	Technology
+TEM	Tempus AI, Inc.	US Stocks	Health Care
+PNW	Pinnacle West Capital Corpor	US Stocks	Utilities
+JBS	JBS N.V.	US Stocks	Cons. Staples
+DT	Dynatrace, Inc.	US Stocks	Technology
+CHYM	Chime Financial, Inc.	US Stocks	Technology
+WTRG	Essential Utilities, Inc.	US Stocks	Utilities
+SEIC	SEI Investments Company	US Stocks	Financials
+TRMB	Trimble Inc.	US Stocks	Technology
+WSO	Watsco, Inc.	US Stocks	Industrials
+ASTS	AST SpaceMobile, Inc.	US Stocks	Technology
+IVZ	Invesco Ltd	US Stocks	Financials
+PEN	Penumbra, Inc.	US Stocks	Health Care
+MKC	McCormick & Company, Incorpo	US Stocks	Cons. Staples
+MKC-V	McCormick & Company, Incorpo	US Stocks	Cons. Staples
+AEG	Aegon Ltd. New York Registry	US Stocks	Financials
+ELS	Equity Lifestyle Properties,	US Stocks	Real Estate
+JKHY	Jack Henry & Associates, Inc	US Stocks	Technology
+CSGP	CoStar Group, Inc.	US Stocks	Real Estate
+RDY	Dr. Reddy's Laboratories Ltd	US Stocks	Health Care
+AKAM	Akamai Technologies, Inc.	US Stocks	Technology
+UNM	Unum Group	US Stocks	Financials
+LULU	lululemon athletica inc.	US Stocks	Cons. Discretionary
+TXRH	Texas Roadhouse, Inc.	US Stocks	Cons. Discretionary
+DTM	DT Midstream, Inc.	US Stocks	Energy
+HRL	Hormel Foods Corporation	US Stocks	Cons. Staples
+RRC	Range Resources Corporation	US Stocks	Energy
+CR	Crane Company	US Stocks	Industrials
+LII	Lennox International, Inc.	US Stocks	Industrials
+IT	Gartner, Inc.	US Stocks	Technology
+GL	Globe Life Inc.	US Stocks	Financials
+SAIL	SailPoint, Inc.	US Stocks	Technology
+HII	Huntington Ingalls Industrie	US Stocks	Industrials
+AGI	Alamos Gold Inc.	US Stocks	Materials
+RTO	Rentokil Initial plc	US Stocks	Industrials
+MICC	The Magnum Ice Cream Company	US Stocks	Cons. Staples
+ALGN	Align Technology, Inc.	US Stocks	Health Care
+WTS	Watts Water Technologies, In	US Stocks	Industrials
+MAIR	Madison Air Solutions Corpor	US Stocks	Industrials
+COO	The Cooper Companies, Inc.	US Stocks	Health Care
+AR	Antero Resources Corporation	US Stocks	Energy
+MLI	Mueller Industries, Inc.	US Stocks	Industrials
+SUZ	Suzano S.A.	US Stocks	Materials
+FDS	FactSet Research Systems Inc	US Stocks	Financials
+GLPI	Gaming and Leisure Propertie	US Stocks	Real Estate
+RRX	Regal Rexnord Corporation	US Stocks	Industrials
+FN	Fabrinet	US Stocks	Technology
+NYT	New York Times Company (The)	US Stocks	Communication
+PCOR	Procore Technologies, Inc.	US Stocks	Technology
+FNF	Fidelity National Financial,	US Stocks	Financials
+GGG	Graco Inc.	US Stocks	Industrials
+DECK	Deckers Outdoor Corporation	US Stocks	Cons. Discretionary
+ALLY	Ally Financial Inc.	US Stocks	Financials
+HALO	Halozyme Therapeutics, Inc.	US Stocks	Health Care
+BXP	BXP, Inc.	US Stocks	Real Estate
+FMS	Fresenius Medical Care AG	US Stocks	Health Care
+TLK	PT Telekomunikasi Indonesia,	US Stocks	Communication
+TECH	Bio-Techne Corp	US Stocks	Health Care
+LI	Li Auto Inc.	US Stocks	Cons. Discretionary
+DPZ	Domino's Pizza Inc	US Stocks	Cons. Discretionary
+EVR	Evercore Inc.	US Stocks	Financials
+BWXT	BWX Technologies, Inc.	US Stocks	Industrials
+ONON	On Holding AG	US Stocks	Cons. Discretionary
+BNT	Brookfield Wealth Solutions 	US Stocks	Financials
+PAYC	Paycom Software, Inc.	US Stocks	Technology
+GNRC	Generac Holdlings Inc.	US Stocks	Industrials
+UHS	Universal Health Services, I	US Stocks	Health Care
+GSAT	Globalstar, Inc.	US Stocks	Communication
+STLA	Stellantis N.V.	US Stocks	Cons. Discretionary
+WSE	Wise Group plc	US Stocks	Technology
+BMNR	BitMine Immersion Technologi	US Stocks	Financials
+BMRN	BioMarin Pharmaceutical Inc.	US Stocks	Health Care
+ALB	Albemarle Corporation	US Stocks	Materials
+FHN	First Horizon Corporation	US Stocks	Financials
+ENSG	The Ensign Group, Inc.	US Stocks	Health Care
+PINS	Pinterest, Inc.	US Stocks	Communication
+MOG-B	Moog Inc.	US Stocks	Industrials
+DVA	DaVita Inc.	US Stocks	Health Care
+INIO	INNIO N.V.	US Stocks	Industrials
+PNR	Pentair plc.	US Stocks	Industrials
+MOH	Molina Healthcare Inc	US Stocks	Health Care
+SF	Stifel Financial Corporation	US Stocks	Financials
+AIT	Applied Industrial Technolog	US Stocks	Industrials
+SIRI	SiriusXM Holdings Inc.	US Stocks	Communication
+R	Ryder System, Inc.	US Stocks	Industrials
+HUBS	HubSpot, Inc.	US Stocks	Technology
+RGEN	Repligen Corporation	US Stocks	Health Care
+MOG-A	Moog Inc.	US Stocks	Industrials
+UHAL	U-Haul Holding Company	US Stocks	Industrials
+AES	The AES Corporation	US Stocks	Utilities
+OGE	OGE Energy Corp	US Stocks	Utilities
+PODD	Insulet Corporation	US Stocks	Health Care
+AVTR	Avantor, Inc.	US Stocks	Health Care
+EGP	EastGroup Properties, Inc.	US Stocks	Real Estate
+SMTC	Semtech Corporation	US Stocks	Technology
+JEF	Jefferies Financial Group In	US Stocks	Financials
+AA	Alcoa Corporation	US Stocks	Materials
+FLS	Flowserve Corporation	US Stocks	Industrials
+FRO	Frontline Plc	US Stocks	Energy
+AGNC	AGNC Investment Corp.	US Stocks	Real Estate
+FIG	Figma, Inc.	US Stocks	Technology
+BIO-B	Bio-Rad Laboratories, Inc.	US Stocks	Health Care
+LTH	Life Time Group Holdings, In	US Stocks	Cons. Discretionary
+PSO	Pearson, Plc	US Stocks	Communication
+WTFC	Wintrust Financial Corporati	US Stocks	Financials
+ALSN	Allison Transmission Holding	US Stocks	Cons. Discretionary
+SOLS	Solstice Advanced Materials 	US Stocks	Materials
+KNX	Knight-Swift Transportation 	US Stocks	Industrials
+QGEN	Qiagen N.V.	US Stocks	Health Care
+BAH	Booz Allen Hamilton Holding 	US Stocks	Industrials
+BWA	BorgWarner Inc.	US Stocks	Cons. Discretionary
+SCI	Service Corporation Internat	US Stocks	Cons. Discretionary
+UMBF	UMB Financial Corporation	US Stocks	Financials
+DOCN	DigitalOcean Holdings, Inc.	US Stocks	Technology
+SSB	SouthState Bank Corporation	US Stocks	Financials
+CUBE	CubeSmart	US Stocks	Real Estate
+TTC	Toro Company (The)	US Stocks	Industrials
+PCVX	Vaxcyte, Inc.	US Stocks	Health Care
+NVMI	Nova Ltd.	US Stocks	Technology
+DCI	Donaldson Company, Inc.	US Stocks	Industrials
+ONTO	Onto Innovation Inc.	US Stocks	Technology
+LFUS	Littelfuse, Inc.	US Stocks	Technology
+LLYVK	Liberty Live Holdings, Inc. 	US Stocks	Communication
+ARW	Arrow Electronics, Inc.	US Stocks	Technology
+PAYP	PayPay Corporation - America	US Stocks	Technology
+MTCH	Match Group, Inc.	US Stocks	Communication
+LLYVA	Liberty Live Holdings, Inc. 	US Stocks	Communication
+VSAT	ViaSat, Inc.	US Stocks	Technology
+ZETA	Zeta Global Holdings Corp.	US Stocks	Technology
+ESTC	Elastic N.V.	US Stocks	Technology
+PCTY	Paylocity Holding Corporatio	US Stocks	Technology
+SNAP	Snap Inc.	US Stocks	Communication
+YMM	Full Truck Alliance Co. Ltd.	US Stocks	Technology
+TIMB	TIM S.A.	US Stocks	Communication
+KT	KT Corporation	US Stocks	Communication
+AMKR	Amkor Technology, Inc.	US Stocks	Technology
+NTSK	Netskope, Inc.	US Stocks	Technology
+RMBS	Rambus, Inc.	US Stocks	Technology
+YOU	Clear Secure, Inc.	US Stocks	Technology
+SANM	Sanmina Corporation	US Stocks	Technology
+EPAM	EPAM Systems, Inc.	US Stocks	Technology
+CGNX	Cognex Corporation	US Stocks	Technology
+DSGX	The Descartes Systems Group 	US Stocks	Technology
+GTLB	GitLab Inc.	US Stocks	Technology
+TTAN	ServiceTitan, Inc.	US Stocks	Technology
+TTMI	TTM Technologies, Inc.	US Stocks	Technology
+S	SentinelOne, Inc.	US Stocks	Technology
+DUOL	Duolingo, Inc.	US Stocks	Technology
+RAL	Ralliant Corporation	US Stocks	Technology
+MSGK	MSG Knickerbockers Corp.	US Stocks	Communication
+VIAV	Viavi Solutions Inc.	US Stocks	Technology
+IDCC	InterDigital, Inc.	US Stocks	Technology
+SLAB	Silicon Laboratories, Inc.	US Stocks	Technology
+G	Genpact Limited	US Stocks	Technology
+DBX	Dropbox, Inc.	US Stocks	Technology
+VICR	Vicor Corporation	US Stocks	Technology
+PATH	UiPath, Inc.	US Stocks	Technology
+AVT	Avnet, Inc.	US Stocks	Technology
+MBGL	Mobility Global Inc.	US Stocks	Technology
+FORM	FormFactor, Inc.	US Stocks	Technology
+ZG	Zillow Group, Inc.	US Stocks	Communication
+NAVN	Navan, Inc.	US Stocks	Technology
+Z	Zillow Group, Inc.	US Stocks	Communication
+INGM	Ingram Micro Holding Corpora	US Stocks	Technology
+EXLS	ExlService Holdings, Inc.	US Stocks	Technology
+LYFT	Lyft, Inc.	US Stocks	Technology
+NXST	Nexstar Media Group, Inc.	US Stocks	Communication
+SAIC	Science Applications Interna	US Stocks	Technology
+RNG	Ringcentral, Inc.	US Stocks	Technology
+KVYO	Klaviyo, Inc. Series A	US Stocks	Technology
+CVLT	Commvault Systems, Inc.	US Stocks	Technology
+ACIW	ACI Worldwide, Inc.	US Stocks	Technology
+QLYS	Qualys, Inc.	US Stocks	Technology
+OTEX	Open Text Corporation	US Stocks	Technology
+BOX	Box, Inc.	US Stocks	Technology
+ESE	ESCO Technologies Inc.	US Stocks	Technology
+CRUS	Cirrus Logic, Inc.	US Stocks	Technology
+WPP	WPP plc	US Stocks	Communication
+WEX	WEX Inc.	US Stocks	Technology
+OCTV	Octave Intelligence plc	US Stocks	Technology
+VNT	Vontier Corporation	US Stocks	Technology
+SIMO	Silicon Motion Technology Co	US Stocks	Technology
+BZ	KANZHUN LIMITED - American D	US Stocks	Communication
+ALGM	Allegro MicroSystems, Inc.	US Stocks	Technology
+VRNS	Varonis Systems, Inc.	US Stocks	Technology
+ST	Sensata Technologies Holding	US Stocks	Technology
+NIQ	NIQ Global Intelligence plc	US Stocks	Technology
+PLXS	Plexus Corp.	US Stocks	Technology
+NICE	NICE Ltd	US Stocks	Technology
+VEON	VEON Ltd.	US Stocks	Communication
+BILI	Bilibili Inc.	US Stocks	Communication
+PEGA	Pegasystems Inc.	US Stocks	Technology
+BRZE	Braze, Inc.	US Stocks	Technology
+PSN	Parsons Corporation	US Stocks	Technology
+BB	BlackBerry Limited	US Stocks	Technology
+PI	Impinj, Inc.	US Stocks	Technology
+MXL	MaxLinear, Inc	US Stocks	Technology
+VSNT	Versant Media Group, Inc.	US Stocks	Communication
+NSIT	Insight Enterprises, Inc.	US Stocks	Technology
+IRDM	Iridium Communications Inc	US Stocks	Communication
+RELY	Remitly Global, Inc.	US Stocks	Technology
+APLD	Applied Digital Corporation	US Stocks	Technology
+CNK	Cinemark Holdings Inc Cinema	US Stocks	Communication
+BILL	BILL Holdings, Inc.	US Stocks	Technology
+SYNA	Synaptics Incorporated	US Stocks	Technology
+DOX	Amdocs Limited	US Stocks	Technology
+CORZ	Core Scientific, Inc.	US Stocks	Technology
+QTWO	Q2 Holdings, Inc.	US Stocks	Technology
+CCC	CCC Intelligent Solutions Ho	US Stocks	Technology
+SPHR	Sphere Entertainment Co.	US Stocks	Communication
+NOVT	Novanta Inc.	US Stocks	Technology
+BMI	Badger Meter, Inc.	US Stocks	Technology
+PAY	Paymentus Holdings, Inc.	US Stocks	Technology
+LUMN	Lumen Technologies, Inc.	US Stocks	Communication
+TENB	Tenable Holdings, Inc.	US Stocks	Technology
+MGNI	Magnite, Inc.	US Stocks	Communication
+TKC	Turkcell Iletisim Hizmetleri	US Stocks	Communication
+ITRI	Itron, Inc.	US Stocks	Technology
+LION	Lionsgate Studios Corp	US Stocks	Communication
+LFTO	Liftoff Mobile, Inc.	US Stocks	Communication
+LBTYB	Liberty Global Ltd.	US Stocks	Communication
+VSH	Vishay Intertechnology, Inc.	US Stocks	Technology
+DIOD	Diodes Incorporated	US Stocks	Technology
+OLED	Universal Display Corporatio	US Stocks	Technology
+BDC	Belden Inc	US Stocks	Technology
+DLO	DLocal Limited	US Stocks	Technology
+JOYY	JOYY Inc.	US Stocks	Communication
+MANU	Manchester	US Stocks	Communication
+SRAD	Sportradar Group AG	US Stocks	Technology
+MSGE	Madison Square Garden Entert	US Stocks	Communication
+WK	Workiva Inc.	US Stocks	Technology
+KD	Kyndryl Holdings, Inc.	US Stocks	Technology
+BATRA	Atlanta Braves Holdings, Inc	US Stocks	Communication
+QBTS	D-Wave Quantum Inc.	US Stocks	Technology
+LIF	Life360, Inc.	US Stocks	Technology
+LBTYA	Liberty Global Ltd.	US Stocks	Communication
+KLIC	Kulicke and Soffa Industries	US Stocks	Technology
+NATL	NCR Atleos Corporation	US Stocks	Technology
+INTA	Intapp, Inc.	US Stocks	Technology
+EXTR	Extreme Networks, Inc.	US Stocks	Technology
+LBTYK	Liberty Global Ltd.	US Stocks	Communication
+VIA	Via Transportation, Inc.	US Stocks	Technology
+AVPT	AvePoint, Inc.	US Stocks	Technology
+AGYS	Agilysys, Inc.	US Stocks	Technology
+TDS	Telephone and Data Systems, 	US Stocks	Communication
+BLSH	Bullish	US Stocks	Technology
+FRSH	Freshworks Inc.	US Stocks	Technology
+PPLI	People Incorporated	US Stocks	Communication
+FOUR	Shift4 Payments, Inc.	US Stocks	Technology
+BATRK	Atlanta Braves Holdings, Inc	US Stocks	Communication
+MNDY	monday.com Ltd.	US Stocks	Technology
+BELFB	Bel Fuse Inc.	US Stocks	Technology
+ACLS	Axcelis Technologies, Inc.	US Stocks	Technology
+ALRM	Alarm.com Holdings, Inc.	US Stocks	Technology
+TDC	Teradata Corporation	US Stocks	Technology
+CARG	CarGurus, Inc.	US Stocks	Communication
+CIFR	Cipher Digital Inc.	US Stocks	Technology
+OSIS	OSI Systems, Inc.	US Stocks	Technology
+ACGLO	Arch Capital Group Ltd. - De	US Stocks	Financials

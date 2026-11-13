@@ -79,7 +79,7 @@ POOL_OF = {
     ("FX", "US Dollar"): "US Dollar", ("FX", "G10 FX"): "Non-USD FX", ("FX", "Spot Pairs"): None,
     ("Credit", "Investment Grade"): "IG Credit", ("Credit", "Munis & MBS"): "IG Credit", ("Credit", "High Yield"): "HY Credit",
 }
-EXCLUDE_FROM_POOLS = {"Futures & Vol", "US Stocks", "Europe Stocks", "Asia Stocks"}  # avoids double counting with the ETF pools
+EXCLUDE_FROM_POOLS = {"Futures & Vol", "Indices", "US Stocks", "Europe Stocks", "Asia Stocks"}  # avoids double counting with the ETF pools
 META["pool"] = [None if c in EXCLUDE_FROM_POOLS else POOL_OF.get((c, g), c) for c, g in zip(META["cls"], META["group"])]
 
 RISK_ON_BASKET = ["SPY", "QQQ", "IWM", "EEM", "HYG", "CPER"]  # equal-weight
@@ -195,7 +195,7 @@ def _clean(panels: dict) -> dict:
         df = df.loc[df.index.isin(idx)].sort_index()
         df = df.loc[~df.index.duplicated(keep="last")]
         out[k] = df.fillna(0.0) if k == "Volume" else df.ffill(limit=5)
-    good = out["Close"].columns[out["Close"].notna().sum() >= 130]
+    good = out["Close"].columns[out["Close"].notna().sum() >= 80]     # 80 days: recent listings are included once the 60-day score exists
     return {k: v[good] for k, v in out.items()}
 
 
@@ -1503,8 +1503,8 @@ with st.sidebar:
                     help="Live = Yahoo Finance. Demo = synthetic data so the terminal can be explored offline.")
     if st.button("⟳ Refresh data", width="stretch"):
         st.cache_data.clear()
-    st.toggle("Aandelen wereldwijd (±690)", key="stocks",
-              help="Laadt ook losse aandelen uit de VS (incl. Nasdaq), Europa en Azië. Eerste keer ±2 minuten, daarna 6 uur op schijf bewaard.")
+    st.toggle(f"Aandelen wereldwijd (±{int((~META['core']).sum())})", key="stocks",
+              help="Laadt ook losse aandelen uit de VS (incl. Nasdaq), Europa en Azië. Eerste keer ±5 minuten, daarna 6 uur op schijf bewaard.")
     st.toggle("Auto-refresh (5 min)", key="auto", help="Herlaadt de pagina elke 5 minuten. Dagdata ververst elke 15 min, LIVE 1D elke 4 min.")
     sec("Composite weights")
     wt = tuple(st.slider(c, 0, 50, step=5, key=f"w_{c}") for c in COMP_COLS)
@@ -1538,7 +1538,7 @@ if demo:
     P = make_demo(tickers)
 stocks_asof = None
 if not demo and ss.get("stocks", True):
-    with st.spinner("Aandelen wereldwijd laden (eerste keer ±2 minuten, daarna van schijf)…"):
+    with st.spinner("Aandelen wereldwijd laden (eerste keer ±5 minuten, daarna van schijf)…"):
         SP, sfailed, stime = load_stocks(stock_tickers)
     if SP is not None:
         P = {k_: pd.concat([P[k_], SP[k_].reindex(P[k_].index).astype(float)], axis=1) for k_ in P}
@@ -1915,7 +1915,7 @@ def analyst_select(scope, n_pick: int, ml):
         d = d[META["core"].reindex(d.index).fillna(False)]
     elif scope:
         d = d[d["Class"] == scope]
-    d = d[~d["Class"].isin(["Cash", "Futures & Vol"]) & ~d["Group"].isin(["Spot Pairs", "Volatility"])]   # things you can actually buy and hold
+    d = d[~d["Class"].isin(["Cash", "Futures & Vol", "Indices"]) & ~d["Group"].isin(["Spot Pairs", "Volatility"])]   # things you can actually buy and hold
     picks = d[(d["Kans"] > 15) & (d["Totaal"] > 5) & (d["20D"] > 0) & (d["MFI raw"] < 90)].sort_values("Kans", ascending=False).head(n_pick)
     wgt = pd.Series(dtype=float)
     if not picks.empty:
@@ -2982,7 +2982,7 @@ elif view == "GEHEUGEN":
         w_ = g_.set_index("ticker")["weight"].reindex(tk)
         scope_code = SCOPES.get(sc_)
         uni_cols = [c for c in Cc.columns if c in META.index and (scope_code is None or (scope_code == "core" and META.loc[c, "core"]) or META.loc[c, "cls"] == scope_code)
-                    and META.loc[c, "cls"] not in ("Cash", "Futures & Vol")]
+                    and META.loc[c, "cls"] not in ("Cash", "Futures & Vol", "Indices")]
         bench = float(((Cc[uni_cols].iloc[-1] / Cc.loc[ent, uni_cols] - 1) * 100).median())
         mine = float((ret * w_).sum() / w_.sum())
         rows_.append({"Datum advies": dt_, "Selectie": sc_, "Instrumenten": ", ".join(tk), "Handelsdagen": len(after) - 1, "Selectie %": mine,
