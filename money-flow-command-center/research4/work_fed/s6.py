@@ -21,7 +21,7 @@ for nm,m in [("last day",last),("last 2 days",last|off(-1)),("last 3 days",last|
     for tk in ["TLT","IEF"]:
         for c in (2.0,1.0):
             x=strat(tk,m,c); e=lib4.ts_eval(x,R[tk])
-            print(nm,tk,c,ev(x,R[tk]), "worst day",round(x.min()*100,2),"worst month",round(x.resample("M").sum().min()*100,2))
+            print(nm,tk,c,ev(x,R[tk]), "worst day",round(x.min()*100,2),"worst month",round(x.resample("ME").sum().min()*100,2))
 x=strat("TLT",last); e=lib4.ts_eval(x,R["TLT"]); print(e["by_year_pct"])
 ev_=R["TLT"][last.reindex(R["TLT"].index)].dropna(); print("hit rate",(ev_>0).mean(), "n",len(ev_), "top5",ev_.nlargest(5).round(4).to_dict(), "sum top5 share", ev_.nlargest(5).sum()/ev_.sum())
 print("by month-of-year bp:", (ev_.groupby(ev_.index.month).mean()*1e4).round(0).to_dict())

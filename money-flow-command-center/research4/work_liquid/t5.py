@@ -6,8 +6,8 @@ cp=cp[cp.auction_date>="2002-08-01"].sort_values("auction_date").copy()
 cp["btc_z"]=cp.groupby("cls").bid_to_cover_ratio.transform(lambda s:(s-s.shift(1).rolling(6).mean())/s.shift(1).rolling(6).std())
 for cl,y in [("10","^TNX"),("30","^TYX"),("5","^FVX")]:
     m=cp.cls==cl; prev=C[y].shift(1).reindex(jx).reindex(cp.loc[m,"auction_date"],method="ffill").values
-    cp.loc[m,"tail"]=cp.loc[m,"high_yield"]-prev
-cp.loc[cp.tail.abs()>0.4,"tail"]=np.nan
+    cp.loc[m,"tl"]=cp.loc[m,"high_yield"]-prev
+cp.loc[cp.tl.abs()>0.4,"tl"]=np.nan
 r=C[["TLT","IEF","SPY"]].pct_change(fill_method=None)
 fw={}
 for a in ["TLT","SPY"]:
@@ -18,8 +18,8 @@ def fwd(sub,lab):
     print(lab,len(d)," ".join(f"{a}{h}d={fw[(a,h)].reindex(d).mean()*1e4:6.1f}bp(t{fw[(a,h)].reindex(d).mean()/fw[(a,h)].reindex(d).std()*np.sqrt(len(d)):5.2f})" for a,h in fw))
 L1030=cp[cp.cls.isin(["10","30"])]
 fwd(L1030,"all 10/30   "); fwd(L1030[L1030.btc_z<-1],"weak btc z<-1"); fwd(L1030[L1030.btc_z>1],"strong btc z>1")
-T=cp[cp.tail.notna()]; print("tail corr w/ same-day yield change is contaminated (prior close vs 13:00) - noted")
-fwd(T[T.tail>0.03],"tail>3bp vs prior close"); fwd(T[T.tail<-0.03],"stop-through<-3bp")
+T=cp[cp.tl.notna()]; print("tail corr w/ same-day yield change is contaminated (prior close vs 13:00) - noted")
+fwd(T[T.tl>0.03],"tail>3bp vs prior close"); fwd(T[T.tl<-0.03],"stop-through<-3bp")
 allc=cp; fwd(allc[allc.btc_z<-1],"all coupons weak"); fwd(allc[allc.btc_z>1],"all coupons strong")
 # as strategies (same_close on auction day, hold 3 days)
 def hold(dates,N,asset,sign=1):
@@ -50,4 +50,4 @@ for a in ["SPY","TLT","HYG"]:
 n+=3
 print("n",n)
 # --- candidate subperiods
-import t4
+
