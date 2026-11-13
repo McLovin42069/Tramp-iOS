@@ -10,7 +10,7 @@ Usage:  python collector.py            (full run)
 """
 import sys, time, json
 import numpy as np, pandas as pd
-import store, feeds, patterns
+import store, feeds, patterns, alarm
 from universe import META
 
 PATTERN_TICKERS = ["SPY", "QQQ", "TLT", "EWH", "FXI", "EWT", "XLE"]
@@ -50,12 +50,12 @@ def build_D(max_age_h=6.0, offline=False, heavy=True):
     disk_only = offline or not heavy
     sp = (store.disk("stocks.pkl") or {}).get("panels") if disk_only else _stock_panels()
     if sp is not None:
-        reg = [t for t in META.index[META["cls"].isin(["Asia Stocks", "Europe Stocks"])] if t in sp["Close"].columns]
+        reg = [t for t in META.index[META["cls"].isin(["Asia Stocks", "Europe Stocks"]) & META["base"]] if t in sp["Close"].columns]
         sc = sp["Close"][reg].astype(float).ffill(limit=5)
         D["C"] = pd.concat([D["C"], sc], axis=1).sort_index()
         D["O"], D["V"] = D["O"].reindex(D["C"].index), D["V"].reindex(D["C"].index)
         asia = [t for t in reg if META.at[t, "cls"] == "Asia Stocks"]
-        D["shares"] = store.disk("shares.pkl") if disk_only else feeds.fetch_shares(reg)
+        D["shares"] = store.disk("shares.pkl") if disk_only else feeds.fetch_shares([t for t in META.index if t in sp["Close"].columns])   # whole universe: the app reads the same file
         D["earnings"] = store.disk("earnings.pkl") if disk_only else feeds.fetch_earnings(asia)
     D["funding"] = store.disk("funding.pkl") if disk_only else feeds.fetch_funding()
     D["meta"] = META
@@ -99,6 +99,40 @@ def run(quick=False):
         res = log_patterns(D)
         note["patronen"] = sum(1 for v in res.values() if len(v["ret"]))
         note["actief"] = [k for k, v in res.items() if v["state"].get("active")]
+    try:                                             # market alarm: log the state, notify on a change
+        px = feeds.prices(alarm.TICKERS, period="2y")
+        if px is not None and "SPY" in px["C"].columns:
+            store.disk_save("alarm_px.pkl", px["C"])
+            lvl = alarm.state(px["C"])[0].dropna()
+            now_lvl = alarm.NAMES[int(lvl.iloc[-1])]
+            prev = store.read("SELECT value FROM settings WHERE key='alarm_last'")
+            prev_lvl = json.loads(prev["value"].iloc[0]) if len(prev) else None
+            note["alarm"] = now_lvl
+            if prev_lvl and prev_lvl != now_lvl:
+                feeds.notify("Qtron marktalarm", f"Marktalarm van {prev_lvl} naar {now_lvl}. {alarm.ADVICE[int(lvl.iloc[-1])]}")
+            store.write("INSERT OR REPLACE INTO settings VALUES (?,?)", [("alarm_last", json.dumps(now_lvl))])
+    except Exception as e:
+        note["alarm"] = f"fout: {type(e).__name__}"
+    try:                                             # pattern changes
+        prev = store.read("SELECT value FROM settings WHERE key='patterns_last'")
+        prev_act = json.loads(prev["value"].iloc[0]) if len(prev) else None
+        act = sorted(note.get("actief", []))
+        if prev_act is not None and act != prev_act and D is not None:
+            new = [patterns.BY_ID[k]["naam"] for k in act if k not in prev_act]
+            if new:
+                feeds.notify("Qtron patronen", "Nu actief: " + ", ".join(new))
+        store.write("INSERT OR REPLACE INTO settings VALUES (?,?)", [("patterns_last", json.dumps(act))])
+    except Exception:
+        pass
+    if not quick:
+        try:                                         # refresh the instrument list once a month (new listings)
+            f = store.BASE / "universe_world.tsv"
+            if not f.exists() or time.time() - f.stat().st_mtime > 30 * 86400:
+                import subprocess
+                subprocess.run([sys.executable, str(store.BASE / "build_universe.py")], cwd=str(store.BASE), timeout=1500, capture_output=True)
+                note["universum"] = "ververst"
+        except Exception:
+            pass
     if not quick:
         day = pd.Timestamp.today()
         for name, fn, arg in (("intraday_15m", feeds.archive_intraday, list(META.index)),

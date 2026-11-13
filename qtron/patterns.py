@@ -251,8 +251,9 @@ def _asia(D):
     m = D.get("meta")
     if m is None:
         return [], []
-    asia = [t for t in m.index[m["cls"] == "Asia Stocks"] if t in D["C"].columns]
-    eur = [t for t in m.index[m["cls"] == "Europe Stocks"] if t in D["C"].columns]
+    base = m["base"] if "base" in m.columns else True                      # the patterns stay on the list they were frozen on
+    asia = [t for t in m.index[(m["cls"] == "Asia Stocks") & base] if t in D["C"].columns]
+    eur = [t for t in m.index[(m["cls"] == "Europe Stocks") & base] if t in D["C"].columns]
     return asia, eur
 
 

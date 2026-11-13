@@ -1,0 +1,93 @@
+{
+ "strategie": {
+  "altijd belegd": {
+   "rendement_per_jaar_pct": 10.74,
+   "grootste_verlies_pct": -55.2,
+   "beweeglijkheid_pct": 18.5,
+   "tijd_uit_markt_pct": 0.0,
+   "wissels": 0,
+   "2000-2002": -47.2,
+   "2007-2009": -54.8,
+   "2020 corona": -33.4,
+   "2022": -24.1,
+   "sinds_2010_per_jaar_pct": 14.0
+  },
+  "uit bij ROOD": {
+   "rendement_per_jaar_pct": 7.56,
+   "grootste_verlies_pct": -48.5,
+   "beweeglijkheid_pct": 13.6,
+   "tijd_uit_markt_pct": 13.9,
+   "wissels": 236,
+   "2000-2002": -42.8,
+   "2007-2009": -20.2,
+   "2020 corona": -17.2,
+   "2022": -33.7,
+   "sinds_2010_per_jaar_pct": 9.04
+  },
+  "uit bij ORANJE of ROOD": {
+   "rendement_per_jaar_pct": 7.25,
+   "grootste_verlies_pct": -30.9,
+   "beweeglijkheid_pct": 12.0,
+   "tijd_uit_markt_pct": 22.1,
+   "wissels": 312,
+   "2000-2002": -23.5,
+   "2007-2009": -12.6,
+   "2020 corona": -4.3,
+   "2022": -26.2,
+   "sinds_2010_per_jaar_pct": 7.65
+  }
+ },
+ "vooruit": {
+  "20d": {
+   "GROEN": {
+    "gem_pct": 0.93,
+    "slechtste_5pct": -5.4,
+    "kans_op_verlies_groter_dan_10pct": 0.7,
+    "dagen": 6428
+   },
+   "ORANJE": {
+    "gem_pct": -0.02,
+    "slechtste_5pct": -9.2,
+    "kans_op_verlies_groter_dan_10pct": 3.7,
+    "dagen": 696
+   },
+   "ROOD": {
+    "gem_pct": 1.44,
+    "slechtste_5pct": -11.9,
+    "kans_op_verlies_groter_dan_10pct": 6.7,
+    "dagen": 1184
+   }
+  },
+  "60d": {
+   "GROEN": {
+    "gem_pct": 2.99,
+    "slechtste_5pct": -8.2,
+    "kans_op_verlies_groter_dan_10pct": 3.3,
+    "dagen": 6428
+   },
+   "ORANJE": {
+    "gem_pct": -0.41,
+    "slechtste_5pct": -14.6,
+    "kans_op_verlies_groter_dan_10pct": 16.4,
+    "dagen": 696
+   },
+   "ROOD": {
+    "gem_pct": 3.36,
+    "slechtste_5pct": -19.1,
+    "kans_op_verlies_groter_dan_10pct": 10.4,
+    "dagen": 1184
+   }
+  }
+ },
+ "nu": {
+  "stand": "GROEN",
+  "datum": "2026-11-13",
+  "onderdelen": {
+   "trend": false,
+   "krediet": false,
+   "paniek": false,
+   "breedte": false
+  }
+ },
+ "van": "1993-11-11"
+}

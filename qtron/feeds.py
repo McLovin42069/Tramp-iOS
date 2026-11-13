@@ -187,3 +187,84 @@ def archive_news(tickers, day=None):
             continue
     df = pd.DataFrame(rows)
     return store.archive_append("news_headlines", df[df["title"].notna()] if len(df) else df, ["ticker", "id"], day)
+
+
+# ── on-demand context for one instrument (cached by the app) ─────────────────────────────────────
+def instrument_info(t):
+    """Valuation and quality figures as Yahoo reports them today (no history: for information, not for testing)."""
+    import yfinance as yf
+    try:
+        i = yf.Ticker(t).info or {}
+    except Exception:
+        return {}
+    keys = ("trailingPE", "forwardPE", "priceToBook", "enterpriseToEbitda", "freeCashflow", "marketCap", "returnOnEquity", "debtToEquity", "profitMargins",
+            "dividendYield", "revenueGrowth", "earningsGrowth", "sector", "industry", "currency", "longName", "quoteType")
+    return {k: i.get(k) for k in keys if i.get(k) is not None}
+
+
+def instrument_news(t, n=8):
+    import yfinance as yf
+    out = []
+    try:
+        for x in (yf.Ticker(t).news or [])[:n]:
+            c = x.get("content", x)
+            prov = c.get("provider", {})
+            url = (c.get("canonicalUrl") or {}).get("url") if isinstance(c.get("canonicalUrl"), dict) else x.get("link")
+            out.append({"title": c.get("title"), "publisher": prov.get("displayName") if isinstance(prov, dict) else x.get("publisher"),
+                        "time": str(c.get("pubDate") or "")[:16].replace("T", " "), "url": url})
+    except Exception:
+        pass
+    return [o for o in out if o["title"]]
+
+
+def next_earnings(t):
+    """Next earnings date of one company (Timestamp) or None."""
+    import yfinance as yf
+    try:
+        cal = yf.Ticker(t).calendar or {}
+        d = cal.get("Earnings Date")
+        d = d[0] if isinstance(d, (list, tuple)) and d else d
+        return pd.Timestamp(d) if d is not None else None
+    except Exception:
+        return None
+
+
+def fomc_dates(max_age_h=7 * 24):
+    """Scheduled Federal Reserve rate decisions (second day of each meeting), from federalreserve.gov. Cached weekly."""
+    got = store.disk("fomc.pkl", max_age_h)
+    if got is not None:
+        return got
+    import re
+    try:
+        html = requests.get("https://www.federalreserve.gov/monetarypolicy/fomccalendars.htm", headers=UA, timeout=30).text
+        out = []
+        for ym in re.finditer(r"(20\d\d) FOMC Meetings(.*?)(?=20\d\d FOMC Meetings|$)", html, flags=re.S):
+            year, blk = int(ym.group(1)), ym.group(2)
+            for m in re.finditer(r'fomc-meeting__month[^>]*>\s*<strong>([A-Za-z/]+)</strong>.*?fomc-meeting__date[^>]*>\s*([0-9\-]+)', blk, flags=re.S):
+                mon, days = m.group(1).split("/")[-1], m.group(2).split("-")
+                try:
+                    out.append(pd.Timestamp(f"{days[-1]} {mon[:3]} {year}"))
+                except Exception:
+                    pass
+        out = sorted(set(out))
+        out = [d for i, d in enumerate(out) if i == 0 or (d - out[i - 1]).days >= 28]     # meetings are at least five weeks apart
+        if len(out) >= 4:
+            store.disk_save("fomc.pkl", out)
+            return out
+    except Exception:
+        pass
+    return store.disk("fomc.pkl") or []
+
+
+def notify(title, message):
+    """Optional phone notification through ntfy.sh. Only sent when the user has set a topic (settings key 'ntfy_topic').
+    The message text leaves this computer when this is switched on."""
+    try:
+        s = store.read("SELECT value FROM settings WHERE key='ntfy_topic'")
+        topic = __import__("json").loads(s["value"].iloc[0]) if len(s) else ""
+        if not topic:
+            return False
+        r = requests.post(f"https://ntfy.sh/{topic}", data=message.encode("utf-8"), headers={"Title": title.encode("ascii", "ignore").decode()}, timeout=15)
+        return r.status_code == 200
+    except Exception:
+        return False

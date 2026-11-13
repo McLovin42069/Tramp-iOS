@@ -177,13 +177,18 @@ for (_c, _g), _txt in STOCKS.items():
         _t, _, _n = _tok.partition("=")
         if _t not in _core:
             _rows.append((_t, _n.replace("_", " ") or _t, _c, _g))
+BASE_STOCKS = {r[0] for r in _rows}          # the hand-picked list the frozen patterns were defined on
 try:                                        # data-driven extension: all large US listings (see build_universe.py)
     from pathlib import Path as _P
-    _x = pd.read_csv(_P(__file__).with_name("universe_extra.tsv"), sep="\t", dtype=str).dropna()
-    _seen = _core | {r[0] for r in _rows}
-    _rows += [tuple(r) for r in _x[["ticker", "name", "cls", "group"]].itertuples(index=False) if r[0] not in _seen]
+    for _f in ("universe_extra.tsv", "universe_world.tsv"):
+        _fp = _P(__file__).with_name(_f)
+        if _fp.exists():
+            _x = pd.read_csv(_fp, sep="\t", dtype=str).dropna()
+            _seen = _core | {r[0] for r in _rows}
+            _rows += [tuple(r) for r in _x[["ticker", "name", "cls", "group"]].itertuples(index=False) if r[0] not in _seen]
 except Exception:
     pass
 META = pd.DataFrame(U + _rows, columns=["ticker", "name", "cls", "group"]).drop_duplicates("ticker").set_index("ticker")
-META["core"] = META.index.isin(_core)      # core = cross-asset ETFs/futures/FX that drive pools, regime and the live view
+META["core"] = META.index.isin(_core)
+META["base"] = META.index.isin(BASE_STOCKS)      # core = cross-asset ETFs/futures/FX that drive pools, regime and the live view
 STOCK_CLASSES = ["US Stocks", "Europe Stocks", "Asia Stocks"]
