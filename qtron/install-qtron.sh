@@ -18,8 +18,12 @@ if [ -d "$OLD/cache" ] && [ ! -d "$DIR/cache" ]; then
   echo "==> Geheugen en portefeuille overnemen uit $OLD"
   cp -a "$OLD/cache" "$DIR/cache"
 fi
-systemctl --user disable --now qtron.service 2>/dev/null || true
+# De oude Money Flow-dienst bezet dezelfde poort en herstart zichzelf: eerst uitschakelen, dan pas stoppen.
+systemctl --user disable --now money-flow.service 2>/dev/null || true
+systemctl --user stop qtron.service 2>/dev/null || true
 pkill -f "$OLD/.venv/bin/streamlit" 2>/dev/null || true
+pkill -f "$DIR/.venv/bin/streamlit" 2>/dev/null || true
+sleep 1
 sed '1,/^__PAYLOAD__$/d' "$0" | base64 -d | tar -xz -C "$DIR"
 python3 -m venv "$DIR/.venv"
 "$DIR/.venv/bin/pip" install --quiet --upgrade pip
@@ -125,6 +129,13 @@ else
   sleep 1
   nohup "$DIR/start.sh" > "$DIR/app.log" 2>&1 &
   echo "==> Gestart op de achtergrond (log: $DIR/app.log). Opnieuw starten: $DIR/start.sh"
+fi
+sleep 6
+if pgrep -f "$OLD/.venv/bin/streamlit" >/dev/null 2>&1; then
+  echo "LET OP: de oude Money Flow-app draait nog en bezet mogelijk poort $PORT. Stop hem met:"
+  echo "        systemctl --user disable --now money-flow.service; pkill -f money-flow-command-center/.venv/bin/streamlit"
+elif ! pgrep -f "$DIR/.venv/bin/streamlit" >/dev/null 2>&1; then
+  echo "LET OP: Qtron lijkt niet gestart. Bekijk: journalctl --user -u qtron -n 30   of   $DIR/app.log"
 fi
 echo
 echo "KLAAR. Start de app met het icoon 'Qtron' (bureaublad of programmamenu), of: $DIR/qtron.sh"
